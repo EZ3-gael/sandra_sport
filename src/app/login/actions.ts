@@ -1,49 +1,43 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-
-const loginSchema = z.object({
-  email: z.string().email('Email invalide.').toLowerCase(),
-});
+import { loginSchema } from '@/lib/validations/auth';
 
 /**
- * Envoie un magic link à l'email donné.
- * L'utilisateur reçoit un lien qui le redirige vers /auth/callback?code=...
+ * Connexion email + password via Supabase.
+ *
+ * - Succès : session créée, redirect vers /wellness.
+ * - Échec : redirect vers /login?error=... avec message explicite.
  */
-export async function signInWithOtp(formData: FormData) {
+export async function signInWithPassword(formData: FormData): Promise<void> {
   const parsed = loginSchema.safeParse({
     email: formData.get('email'),
+    password: formData.get('password'),
   });
 
   if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message ?? 'Email invalide.';
+    const msg = parsed.error.issues[0]?.message ?? 'Données invalides.';
     redirect(`/login?error=${encodeURIComponent(msg)}`);
   }
 
   const supabase = await createClient();
-
-  const headersList = await headers();
-  const protocol = headersList.get('x-forwarded-proto') ?? 'http';
-  const host = headersList.get('host') ?? 'localhost:3000';
-  const origin = `${protocol}://${host}`;
-
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
+    password: parsed.data.password,
   });
 
   if (error) {
     redirect(
       `/login?error=${encodeURIComponent(
-        error.message || "Impossible d'envoyer le lien.",
+        error.message === 'Invalid login credentials'
+          ? 'Email ou mot de passe incorrect.'
+          : error.message,
       )}`,
     );
   }
 
-  redirect('/login?sent=1');
+  revalidatePath('/', 'layout');
+  redirect('/wellness');
 }
