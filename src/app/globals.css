@@ -63,61 +63,6 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* ------------------------------------------------------------------
- * RpeSlider — style du slider natif range (cross-browser).
- * Track rendu via un div positionné derrière (pour pouvoir faire la
- * jauge bicolore dynamique). Ici on rend juste le thumb visible et
- * tactile, et on cache la piste native.
- * ------------------------------------------------------------------ */
-
-.rpe-range {
-  /* Hauteur suffisante pour englober un thumb de 44px */
-  height: 44px;
-}
-
-.rpe-range::-webkit-slider-runnable-track {
-  height: 8px;
-  background: transparent;
-  border: 0;
-}
-
-.rpe-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 28px;
-  height: 28px;
-  margin-top: -10px;
-  border-radius: 9999px;
-  background: var(--color-primary);
-  border: 3px solid var(--color-background);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-
-.rpe-range::-moz-range-track {
-  height: 8px;
-  background: transparent;
-  border: 0;
-}
-
-.rpe-range::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
-  border-radius: 9999px;
-  background: var(--color-primary);
-  border: 3px solid var(--color-background);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-
-.rpe-range:focus {
-  outline: none;
-}
-
-.rpe-range:focus::-webkit-slider-thumb {
-  box-shadow: 0 0 0 4px rgba(0, 124, 195, 0.35);
-}
-
-.rpe-range:focus::-moz-range-thumb {
-  box-shadow: 0 0 0 4px rgba(0, 124, 195, 0.35);
-}
+/* RpeSlider — l'input range natif est rendu invisible (opacity-0) et
+ * superposé sur un track custom (divs positionnés absolute). Le thumb,
+ * les ticks et la jauge sont des divs. Pas de CSS natif à styler. */
