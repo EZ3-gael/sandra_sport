@@ -6,6 +6,7 @@ import {
   SessionProtocolView,
   type Protocol,
 } from './SessionProtocolView';
+import { RpeSlider } from '@/components/ui/RpeSlider';
 
 type SessionRow = {
   id: string;
@@ -157,7 +158,14 @@ export default async function SessionDetailPage({
           <RessentiView note={existingNote} />
         ) : (
           <form action={saveAction} className="space-y-5">
-            <RpeRow defaultRpe={existingNote?.notes_struct?.rpe ?? null} />
+            <RpeSlider
+              name="rpe"
+              defaultValue={existingNote?.notes_struct?.rpe ?? null}
+              max={10}
+              label="RPE — intensité perçue"
+              low="1 — très facile"
+              high="10 — effort maximal"
+            />
             <PostSessionEnergyRow
               defaultEnergy={
                 existingNote?.notes_struct?.post_session_energy ?? null
@@ -289,45 +297,6 @@ function StatusBadge({ status }: { status: SessionRow['status'] }) {
     <span className={`rounded-md px-2 py-0.5 ${styles[status]}`}>
       {labels[status]}
     </span>
-  );
-}
-
-function RpeRow({ defaultRpe }: { defaultRpe: number | null }) {
-  return (
-    <fieldset>
-      <legend className="mb-1 text-sm font-medium">RPE — intensité perçue</legend>
-      <p className="mb-2 text-xs text-muted-foreground">
-        1 = très facile · 10 = effort maximal
-      </p>
-      <div className="grid grid-cols-11 gap-1">
-        <label className="cursor-pointer">
-          <input
-            type="radio"
-            name="rpe"
-            value=""
-            defaultChecked={defaultRpe === null}
-            className="peer sr-only"
-          />
-          <div className="rounded-md border border-border bg-input py-1.5 text-center text-xs text-muted-foreground peer-checked:border-muted-foreground peer-checked:bg-muted peer-checked:text-foreground">
-            —
-          </div>
-        </label>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-          <label key={n} className="cursor-pointer">
-            <input
-              type="radio"
-              name="rpe"
-              value={String(n)}
-              defaultChecked={defaultRpe === n}
-              className="peer sr-only"
-            />
-            <div className="rounded-md border border-border bg-input py-1.5 text-center text-xs font-medium peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
-              {n}
-            </div>
-          </label>
-        ))}
-      </div>
-    </fieldset>
   );
 }
 
