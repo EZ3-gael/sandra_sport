@@ -27,7 +27,7 @@ type SessionNoteRow = {
   captured_at: string;
   notes_struct: {
     rpe?: number;
-    fatigue?: number;
+    post_session_energy?: number;
     zones_douleur?: string[];
   } | null;
   notes_brut: string | null;
@@ -132,7 +132,7 @@ export default async function SessionDetailPage({
 
         <form action={saveAction} className="space-y-5">
           <RpeRow />
-          <FatigueRow />
+          <PostSessionEnergyRow />
 
           <div>
             <label
@@ -198,9 +198,9 @@ export default async function SessionDetailPage({
                         RPE {n.notes_struct.rpe}/10
                       </span>
                     )}
-                    {typeof n.notes_struct.fatigue === 'number' && (
+                    {typeof n.notes_struct.post_session_energy === 'number' && (
                       <span className="rounded-md bg-muted px-2 py-0.5">
-                        Fatigue {n.notes_struct.fatigue}/5
+                        Énergie {n.notes_struct.post_session_energy}/5
                       </span>
                     )}
                     {n.notes_struct.zones_douleur &&
@@ -281,18 +281,18 @@ function RpeRow() {
   );
 }
 
-function FatigueRow() {
+function PostSessionEnergyRow() {
   return (
     <fieldset>
-      <legend className="mb-1 text-sm font-medium">Fatigue post-séance</legend>
+      <legend className="mb-1 text-sm font-medium">Énergie post-séance</legend>
       <p className="mb-2 text-xs text-muted-foreground">
-        1 = frais · 5 = vidé
+        1 = vidé · 5 = au top
       </p>
       <div className="grid grid-cols-6 gap-1.5">
         <label className="cursor-pointer">
           <input
             type="radio"
-            name="fatigue"
+            name="post_session_energy"
             value=""
             defaultChecked
             className="peer sr-only"
@@ -305,7 +305,7 @@ function FatigueRow() {
           <label key={n} className="cursor-pointer">
             <input
               type="radio"
-              name="fatigue"
+              name="post_session_energy"
               value={String(n)}
               className="peer sr-only"
             />
