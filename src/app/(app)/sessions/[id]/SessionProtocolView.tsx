@@ -38,7 +38,7 @@ export function SessionProtocolView({
       <div className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
         Protocole non structuré pour cette séance. Relance{' '}
         <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-          python scripts/sync_sessions.py
+          python scripts/session_sync.py
         </code>{' '}
         pour parser le markdown en sections cochables.
       </div>
