@@ -56,6 +56,29 @@ export function RpeSlider({
 
       <input type="hidden" name={name} value={value ?? ''} />
 
+      {/* Chiffres 1..max au-dessus de la barre — cliquables, actif en highlight */}
+      <div className="flex justify-between px-0.5">
+        {values.map((n) => {
+          const isActive = value === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setValue(n)}
+              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold transition ${
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+              aria-label={`Sélectionner ${n}`}
+              aria-pressed={isActive}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Zone du slider : track + ticks + thumb visuel + input range invisible */}
       <div className="relative h-10 select-none">
         {/* Track de fond (gris neutre) */}
@@ -125,30 +148,7 @@ export function RpeSlider({
         />
       </div>
 
-      {/* Chiffres 1..max sous la barre — cliquables, actif en highlight */}
-      <div className="flex justify-between px-0.5">
-        {values.map((n) => {
-          const isActive = value === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setValue(n)}
-              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold transition ${
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-              aria-label={`Sélectionner ${n}`}
-              aria-pressed={isActive}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Labels extrêmes */}
+      {/* Labels extrêmes sous la barre */}
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>{lowLabel}</span>
         <span>{highLabel}</span>
