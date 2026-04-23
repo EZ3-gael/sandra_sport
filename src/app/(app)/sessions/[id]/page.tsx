@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { createClient } from '@/lib/supabase/server';
 import { saveSessionNote } from './actions';
+import {
+  SessionProtocolView,
+  type Protocol,
+} from './SessionProtocolView';
 
 type SessionRow = {
   id: string;
@@ -15,6 +17,7 @@ type SessionRow = {
   session_type: string | null;
   status: 'planned' | 'done' | 'skipped';
   context: string | null;
+  protocol: Protocol | null;
   source: string;
   source_file: string | null;
 };
@@ -28,6 +31,11 @@ type SessionNoteRow = {
     zones_douleur?: string[];
   } | null;
   notes_brut: string | null;
+};
+
+type ItemCheckRow = {
+  item_id: string;
+  checked_at: string;
 };
 
 export default async function SessionDetailPage({
@@ -65,6 +73,15 @@ export default async function SessionDetailPage({
     .eq('user_id', user!.id)
     .order('captured_at', { ascending: false })
     .returns<SessionNoteRow[]>();
+
+  const { data: checks } = await supabase
+    .from('session_item_checks')
+    .select('item_id, checked_at')
+    .eq('session_id', id)
+    .eq('user_id', user!.id)
+    .returns<ItemCheckRow[]>();
+
+  const checkedItemIds = (checks ?? []).map((c) => c.item_id);
 
   const saveAction = saveSessionNote.bind(null, id);
 
@@ -104,24 +121,17 @@ export default async function SessionDetailPage({
         </div>
       )}
 
-      {session.context && (
-        <article
-          className="prose prose-invert prose-sm max-w-none rounded-xl border border-border bg-card p-4
-                     prose-headings:text-foreground prose-strong:text-foreground prose-p:text-muted-foreground
-                     prose-li:text-muted-foreground prose-a:text-primary"
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {session.context}
-          </ReactMarkdown>
-        </article>
-      )}
+      <SessionProtocolView
+        protocol={session.protocol}
+        sessionId={session.id}
+        initialCheckedItemIds={checkedItemIds}
+      />
 
       <section className="rounded-xl border border-border bg-card p-4">
         <h2 className="mb-4 text-lg font-semibold">Ressenti post-séance</h2>
 
         <form action={saveAction} className="space-y-5">
           <RpeRow />
-
           <FatigueRow />
 
           <div>

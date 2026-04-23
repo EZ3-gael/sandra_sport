@@ -99,3 +99,50 @@ export async function saveSessionNote(
   revalidatePath('/sessions');
   redirect(`/sessions/${sessionId}?saved=1`);
 }
+
+/**
+ * Toggle l'état coché d'un item du protocole.
+ *
+ * INSERT si pas encore coché, DELETE sinon. RLS garantit que user ne touche
+ * que ses propres checks.
+ *
+ * Appelée depuis SessionProtocolView via useTransition côté client.
+ */
+export async function toggleItemCheck(
+  sessionId: string,
+  itemId: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Regarde si déjà coché
+  const { data: existing } = await supabase
+    .from('session_item_checks')
+    .select('id')
+    .eq('session_id', sessionId)
+    .eq('item_id', itemId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from('session_item_checks')
+      .delete()
+      .eq('id', existing.id)
+      .eq('user_id', user.id);
+  } else {
+    await supabase.from('session_item_checks').insert({
+      user_id: user.id,
+      session_id: sessionId,
+      item_id: itemId,
+    });
+  }
+
+  revalidatePath(`/sessions/${sessionId}`);
+}
