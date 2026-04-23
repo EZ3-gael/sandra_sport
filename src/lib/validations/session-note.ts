@@ -8,6 +8,9 @@ import { z } from 'zod';
  */
 export const sessionNoteStructSchema = z.object({
   ressenti: z.enum(['bon', 'moyen', 'mauvais']).optional(),
+  // RPE (Rate of Perceived Exertion, échelle de Borg) : convention universelle
+  // du sport — 1 = très facile, 10 = effort maximal. Non inversée pour rester
+  // compatible avec les standards (coachs, Garmin, littérature).
   rpe: z
     .number()
     .int()
@@ -16,9 +19,10 @@ export const sessionNoteStructSchema = z.object({
     .optional(),
   zones_douleur: z.array(z.string().trim().max(50)).max(10).optional(),
   intensite_douleur: z.number().int().min(0).max(10).optional(),
-  fatigue: z.number().int().min(1).max(5).optional(),
+  // Énergie post-séance : 1 = vidé, 5 = au top. Orientation alignée sur
+  // wellness (morning_checkin) où tout est "5 = bien".
+  post_session_energy: z.number().int().min(1).max(5).optional(),
   humeur: z.number().int().min(1).max(5).optional(),
-  energie: z.number().int().min(1).max(5).optional(),
 });
 
 export const sessionNoteSchema = z.object({

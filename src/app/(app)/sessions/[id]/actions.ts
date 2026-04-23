@@ -31,7 +31,9 @@ export async function saveSessionNote(
   }
 
   const rpe = parseOptionalInt(formData.get('rpe'));
-  const fatigue = parseOptionalInt(formData.get('fatigue'));
+  const post_session_energy = parseOptionalInt(
+    formData.get('post_session_energy'),
+  );
   const notes_brut = parseText(formData.get('notes_brut'));
   const status = String(formData.get('status') ?? 'done');
 
@@ -44,7 +46,9 @@ export async function saveSessionNote(
   // Construit la struct en filtrant les undefined (Zod les traitera comme absents)
   const structInput: Record<string, unknown> = {};
   if (rpe !== undefined) structInput.rpe = rpe;
-  if (fatigue !== undefined) structInput.fatigue = fatigue;
+  if (post_session_energy !== undefined) {
+    structInput.post_session_energy = post_session_energy;
+  }
   if (zones_douleur && zones_douleur.length > 0) {
     structInput.zones_douleur = zones_douleur;
   }
