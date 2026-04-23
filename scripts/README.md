@@ -2,9 +2,11 @@
 
 Utilitaires Python autonomes qui alimentent Supabase depuis le workspace local.
 
-## `sync_sessions.py`
+## `session_sync.py`
 
 Synchronise les séances `sport-sante/seances-du-jour/*.md` vers la table `public.sessions` de Supabase.
+
+Le parsing markdown → structure JSON est délégué à `session_parser.py` (module réutilisable, voir plus bas).
 
 ### Install (une fois)
 
@@ -29,7 +31,7 @@ Récupération du UUID : Supabase Dashboard → **Authentication → Users** →
 
 ```bash
 # Depuis sandra_sport/
-scripts/.venv/Scripts/python.exe scripts/sync_sessions.py
+scripts/.venv/Scripts/python.exe scripts/session_sync.py
 ```
 
 Le script est **idempotent** : il upsert par `(user_id, source_file)`. Tu peux le rejouer, il ne duplique pas les séances.
@@ -64,3 +66,35 @@ status: planned                # planned | done | skipped
 ```
 
 Le frontmatter YAML alimente les champs SQL structurés. Tout le body markdown est stocké dans `context`.
+
+Template de référence : [`sport-sante/knowledge/seances/template-seance.md`](../../../01_Brainstorming/sport-sante/knowledge/seances/template-seance.md).
+
+## `session_parser.py`
+
+Module Python autonome qui convertit un body markdown en structure JSON (format `sessions.protocol` attendu par l'app). Sans I/O, sans dépendance Supabase — juste du parsing pur.
+
+Utilisé par :
+- `session_sync.py` (batch import depuis les `.md`).
+- Tout futur flux où Sandra produit une séance en markdown et la pousse directement en DB via MCP (V1.5+).
+
+```python
+from session_parser import parse_protocol
+
+body = """## Contexte
+
+- Jour 4 W17
+...
+"""
+
+protocol = parse_protocol(body)
+# → dict avec clé "sections", consommable par SessionProtocolView.tsx
+```
+
+Fonctions exportées :
+- `parse_protocol(body: str) -> dict` — convertit markdown en structure JSON.
+- `slugify(value: str) -> str` — normalise un titre en identifiant URL-safe.
+- `item_hash(text: str) -> str` — hash SHA1 stable pour identifier un item à travers les re-syncs (évite de casser les checks utilisateur quand la séance est rééditée).
+
+Constantes exportées :
+- `CHECKLIST_SECTION_TITLES` — noms des sections à afficher en checklist interactive (par défaut : `"protocole"`, `"post-séance"`).
+- `EXPANDED_BY_DEFAULT` — noms des sections dépliées au chargement (par défaut : `"protocole"`).

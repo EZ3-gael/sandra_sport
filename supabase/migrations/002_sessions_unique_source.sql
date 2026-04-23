@@ -1,6 +1,6 @@
 -- Sandra Sport — Migration 002 : unicité (user_id, source_file) pour upsert idempotent
 --
--- Le script `scripts/sync_sessions.py` lit les .md du workspace sport-sante
+-- Le script `scripts/session_sync.py` lit les .md du workspace sport-sante
 -- et les upsert dans `sessions`. On identifie une séance de manière stable
 -- par (user_id, source_file), ce qui permet au script d'être idempotent.
 --
