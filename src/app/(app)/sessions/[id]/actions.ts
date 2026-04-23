@@ -84,17 +84,24 @@ export async function saveSessionNote(
     );
   }
 
-  // 2) Insert session_note si contenu à capturer
+  // 2) Upsert session_note : 1 seul ressenti par (user_id, session_id).
+  //    La contrainte UNIQUE créée par la migration 006 garantit l'invariant
+  //    côté DB. L'upsert gère création ET édition avec la même écriture.
   if (hasStruct || notes_brut) {
-    const { error: insertErr } = await supabase.from('session_notes').insert({
-      user_id: user.id,
-      session_id: sessionId,
-      notes_struct: hasStruct ? structParsed.data : null,
-      notes_brut: notes_brut,
-    });
-    if (insertErr) {
+    const { error: upsertErr } = await supabase
+      .from('session_notes')
+      .upsert(
+        {
+          user_id: user.id,
+          session_id: sessionId,
+          notes_struct: hasStruct ? structParsed.data : null,
+          notes_brut: notes_brut,
+        },
+        { onConflict: 'user_id,session_id' },
+      );
+    if (upsertErr) {
       redirect(
-        `/sessions/${sessionId}?error=${encodeURIComponent(insertErr.message)}`,
+        `/sessions/${sessionId}?error=${encodeURIComponent(upsertErr.message)}`,
       );
     }
   }
