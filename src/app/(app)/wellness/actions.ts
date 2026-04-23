@@ -17,6 +17,9 @@ function parseText(v: FormDataEntryValue | null): string | null {
   return s.length > 0 ? s : null;
 }
 
+/**
+ * Insère un nouveau check-in (plusieurs par jour autorisés depuis migration 004).
+ */
 export async function saveCheckin(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const {
@@ -37,7 +40,6 @@ export async function saveCheckin(formData: FormData): Promise<void> {
     calm: parseScore(formData.get('calm')),
     physical_comfort: parseScore(formData.get('physical_comfort')),
     pain_zones: parseText(formData.get('pain_zones')),
-    verbatim: parseText(formData.get('verbatim')),
     notes: parseText(formData.get('notes')),
   };
 
@@ -47,14 +49,11 @@ export async function saveCheckin(formData: FormData): Promise<void> {
     redirect(`/wellness?error=${encodeURIComponent(msg)}`);
   }
 
-  const { error } = await supabase.from('morning_checkin').upsert(
-    {
-      user_id: user.id,
-      source: 'manual' as const,
-      ...parsed.data,
-    },
-    { onConflict: 'user_id,date' },
-  );
+  const { error } = await supabase.from('morning_checkin').insert({
+    user_id: user.id,
+    source: 'manual' as const,
+    ...parsed.data,
+  });
 
   if (error) {
     redirect(`/wellness?error=${encodeURIComponent(error.message)}`);

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* Couleurs — dark-first, fallback light par classe html.light */
 

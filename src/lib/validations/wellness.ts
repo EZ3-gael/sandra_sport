@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
 /**
- * Schéma de validation du check-in matinal.
+ * Schéma de validation du check-in matinal / intra-journée.
  *
- * Aligné sur le schéma SQL `public.morning_checkin` (migration 001_init.sql).
- * Toutes les dimensions 1-5 acceptent `null` — il ne faut jamais inventer
- * un score au pif, laisser vide si non exprimé par l'utilisateur.
+ * Aligné sur `public.morning_checkin` (migrations 001 + 004).
+ * Plusieurs check-ins par jour sont autorisés depuis la migration 004.
+ * Les 7 dimensions 1-5 acceptent `null` — ne jamais inventer un score.
  */
 const scoreOrNull = z
   .number()
@@ -29,7 +29,6 @@ export const morningCheckinSchema = z.object({
   physical_comfort: scoreOrNull,
 
   pain_zones: z.string().trim().max(500).nullable().optional(),
-  verbatim: z.string().trim().max(2000).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
 });
 
