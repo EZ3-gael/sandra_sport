@@ -19,12 +19,13 @@ export type CheckinRow = MorningCheckin & {
 type Mode = { kind: 'new' } | { kind: 'edit'; entry: CheckinRow };
 
 export function WellnessClient({ entries }: { entries: CheckinRow[] }) {
+  const today = new Date().toISOString().slice(0, 10);
+
   const [mode, setMode] = useState<Mode>({ kind: 'new' });
   const [formKey, setFormKey] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [isPending, startTransition] = useTransition();
-
-  const today = new Date().toISOString().slice(0, 10);
 
   function confirmIfDirty(message: string): boolean {
     if (!dirty) return true;
@@ -40,6 +41,7 @@ export function WellnessClient({ entries }: { entries: CheckinRow[] }) {
       return;
     }
     setMode({ kind: 'edit', entry });
+    setSelectedDate(entry.date);
     setDirty(false);
     setFormKey((k) => k + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -54,8 +56,14 @@ export function WellnessClient({ entries }: { entries: CheckinRow[] }) {
       return;
     }
     setMode({ kind: 'new' });
+    setSelectedDate(today);
     setDirty(false);
     setFormKey((k) => k + 1);
+  }
+
+  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedDate(e.target.value);
+    setDirty(true);
   }
 
   function handleDelete() {
@@ -82,25 +90,37 @@ export function WellnessClient({ entries }: { entries: CheckinRow[] }) {
 
   const isEditMode = mode.kind === 'edit';
 
+  const isPastDate = selectedDate < today;
+
   return (
     <>
+      <header className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Check-in</h1>
+        <input
+          type="date"
+          aria-label="Date du check-in"
+          value={selectedDate}
+          max={today}
+          onChange={handleDateChange}
+          className="rounded-md border border-border bg-input px-2 py-1 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+        />
+      </header>
+
       <form
         key={formKey}
         action={formAction}
         onChange={() => setDirty(true)}
         className="space-y-6 rounded-xl border border-border bg-card p-4"
       >
-        <input
-          type="hidden"
-          name="date"
-          value={isEditMode ? mode.entry.date : today}
-        />
+        <input type="hidden" name="date" value={selectedDate} />
 
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
             {isEditMode
               ? `Édition du check-in du ${new Date(mode.entry.captured_at).toLocaleString('fr-FR')}`
-              : 'Laisse vide les dimensions non exprimées. Plusieurs check-ins par jour possibles.'}
+              : isPastDate
+                ? `Saisie pour le ${formatDateFR(selectedDate)} (jour passé).`
+                : 'Laisse vide les dimensions non exprimées. Plusieurs check-ins par jour possibles.'}
           </p>
           {isEditMode && (
             <button
@@ -195,16 +215,13 @@ function CheckinCard({
   active: boolean;
   onClick: () => void;
 }) {
-  const dt = new Date(entry.captured_at);
-  const dateStr = dt.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: '2-digit',
-  });
-  const timeStr = dt.toLocaleTimeString('fr-FR', {
+  const dateStr = formatDateFR(entry.date);
+  const capturedDay = entry.captured_at.slice(0, 10);
+  const capturedTime = new Date(entry.captured_at).toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
   });
+  const isBackfilled = capturedDay !== entry.date;
 
   return (
     <li>
@@ -219,12 +236,22 @@ function CheckinCard({
       >
         <div className="flex items-baseline justify-between">
           <span className="font-medium">
-            {dateStr} · {timeStr}
+            {dateStr}
+            {!isBackfilled && (
+              <span className="ml-1 font-normal text-muted-foreground">
+                · {capturedTime}
+              </span>
+            )}
           </span>
           <span className="text-xs text-muted-foreground">
             {averageScore(entry)}
           </span>
         </div>
+        {isBackfilled && (
+          <p className="mt-0.5 text-xs italic text-muted-foreground">
+            Saisi a posteriori le {formatDateFR(capturedDay)} à {capturedTime}
+          </p>
+        )}
         <div className="mt-1.5 flex flex-wrap gap-1 text-xs">
           {CHECKIN_DIMENSIONS.map((dim) => {
             const v = entry[dim.key];
@@ -253,6 +280,16 @@ function CheckinCard({
       </button>
     </li>
   );
+}
+
+function formatDateFR(yyyymmdd: string): string {
+  const [y, m, d] = yyyymmdd.split('-').map(Number);
+  if (!y || !m || !d) return yyyymmdd;
+  return new Date(y, m - 1, d).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+  });
 }
 
 function averageScore(r: Partial<MorningCheckin>): string {

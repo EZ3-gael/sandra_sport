@@ -22,8 +22,6 @@ export default async function WellnessPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const today = new Date().toISOString().slice(0, 10);
-
   const { data: recent } = await supabase
     .from('morning_checkin')
     .select('*')
@@ -34,11 +32,6 @@ export default async function WellnessPage({
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Check-in</h1>
-        <span className="text-sm text-muted-foreground">{today}</span>
-      </header>
-
       {saved && (
         <Banner tone="success">Check-in enregistré.</Banner>
       )}
