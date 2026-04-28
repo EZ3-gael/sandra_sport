@@ -6,9 +6,13 @@ import type { MetadataRoute } from 'next';
  * Next.js sert ce fichier sous `/manifest.webmanifest` et injecte automatiquement
  * la balise <link rel="manifest"> dans le <head>.
  *
- * Les icônes sont des SVG placeholder (lettre "S" sur fond bleu Sandra).
- * Le maskable a une safe zone réduite pour résister au masque circulaire
- * Android. À remplacer par un vrai logo quand on en aura un.
+ * Les icônes sont des PNG 192/512 + maskable 512 + un SVG en fallback.
+ * Chrome Android exige des PNG aux dimensions exactes 192x192 et 512x512
+ * pour cocher le critère d'installabilité — un SVG `sizes:"any"` seul ne
+ * suffit pas et l'événement beforeinstallprompt ne se déclenche pas.
+ *
+ * Les PNG sont générés depuis les SVG sources via `scripts/generate-pwa-icons.mjs`.
+ * À régénérer (et committer) si on touche aux SVG sources.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -25,16 +29,28 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'fr',
     icons: [
       {
+        src: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
         src: '/icons/icon.svg',
         sizes: 'any',
         type: 'image/svg+xml',
         purpose: 'any',
-      },
-      {
-        src: '/icons/icon-maskable.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'maskable',
       },
     ],
   };
