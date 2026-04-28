@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { PWARegister } from '@/components/PWARegister';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -15,6 +16,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Sandra Sport',
   description: 'Coaching sportif personnel — suivi séances, wellness et nutrition.',
+  applicationName: 'Sandra Sport',
+  appleWebApp: {
+    capable: true,
+    title: 'Sandra',
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -36,6 +46,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <PWARegister />
       </body>
     </html>
   );
