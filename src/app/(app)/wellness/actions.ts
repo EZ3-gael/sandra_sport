@@ -17,6 +17,14 @@ function parseText(v: FormDataEntryValue | null): string | null {
   return s.length > 0 ? s : null;
 }
 
+function parseAchillesScore(v: FormDataEntryValue | null): number | null {
+  if (v === null || v === '') return null;
+  const n = parseInt(String(v), 10);
+  if (!Number.isFinite(n)) return null;
+  if (n < 0 || n > 10) return null;
+  return n;
+}
+
 function parseFormToPayload(formData: FormData) {
   return {
     date: String(formData.get('date') ?? ''),
@@ -27,6 +35,7 @@ function parseFormToPayload(formData: FormData) {
     motivation: parseScore(formData.get('motivation')),
     calm: parseScore(formData.get('calm')),
     physical_comfort: parseScore(formData.get('physical_comfort')),
+    achilles_score: parseAchillesScore(formData.get('achilles_score')),
     pain_zones: parseText(formData.get('pain_zones')),
     notes: parseText(formData.get('notes')),
   };

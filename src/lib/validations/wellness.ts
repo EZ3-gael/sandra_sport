@@ -15,6 +15,19 @@ const scoreOrNull = z
   .nullable()
   .optional();
 
+/**
+ * Score Achille 0-10 (sémantique inverse des dimensions wellness 1-5) :
+ *   0 = aucune douleur, 10 = douleur maximale.
+ * NULL autorisé (ne jamais inventer un score).
+ */
+const achillesScoreOrNull = z
+  .number()
+  .int()
+  .min(0, 'Le score doit être entre 0 et 10.')
+  .max(10, 'Le score doit être entre 0 et 10.')
+  .nullable()
+  .optional();
+
 export const morningCheckinSchema = z.object({
   date: z
     .string()
@@ -27,6 +40,8 @@ export const morningCheckinSchema = z.object({
   motivation: scoreOrNull,
   calm: scoreOrNull,
   physical_comfort: scoreOrNull,
+
+  achilles_score: achillesScoreOrNull,
 
   pain_zones: z.string().trim().max(500).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),

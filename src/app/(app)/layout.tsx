@@ -28,10 +28,11 @@ export default async function AppLayout({
       {children}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card backdrop-blur">
-        <div className="mx-auto grid max-w-lg grid-cols-4">
+        <div className="mx-auto grid max-w-lg grid-cols-5">
           <NavLink href="/" label="Accueil" icon="home" />
           <NavLink href="/wellness" label="Wellness" icon="heart" />
           <NavLink href="/sessions" label="Séances" icon="activity" />
+          <NavLink href="/programme" label="Programme" icon="target" />
           <SignOutButton />
         </div>
       </nav>
