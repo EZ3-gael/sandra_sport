@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { toggleItemCheck } from './actions';
 
-type ItemNode = { id: string; text: string; kind?: 'item' | 'heading' };
+type ItemNode = { id: string; text: string; kind?: 'item' | 'heading' | 'note' };
 
 type Subsection = {
   id: string;
@@ -87,11 +87,11 @@ function SectionView({
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           {section.type === 'checklist' && total > 0 && (
             <span
-              className={
+              className={`whitespace-nowrap tabular-nums ${
                 checked === total
                   ? 'rounded-md bg-primary/20 px-2 py-0.5 font-medium text-primary'
                   : 'rounded-md bg-muted px-2 py-0.5'
-              }
+              }`}
             >
               {checked} / {total}
             </span>
@@ -175,6 +175,19 @@ function ItemRow({
   if (item.kind === 'heading') {
     return (
       <li className="pt-2 text-sm font-semibold text-foreground first:pt-0">
+        <span
+          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
+        />
+      </li>
+    );
+  }
+
+  // Note : tip technique sous un item exo (syntaxe markdown `> texte`).
+  // Italique gris, indenté, non-cochable. Visuellement attaché à l'item
+  // précédent grâce au padding-left et la marge top minimale.
+  if (item.kind === 'note') {
+    return (
+      <li className="-mt-1 pl-7 text-xs italic text-muted-foreground">
         <span
           dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
         />
@@ -274,7 +287,7 @@ function countItems(
   const allItems: ItemNode[] = [
     ...section.items,
     ...section.subsections.flatMap((s) => s.items),
-  ].filter((i) => i.kind !== 'heading');
+  ].filter((i) => i.kind !== 'heading' && i.kind !== 'note');
   const total = allItems.length;
   const checked = allItems.filter((i) => checkedIds.includes(i.id)).length;
   return { total, checked };

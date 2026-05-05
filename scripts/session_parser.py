@@ -37,6 +37,14 @@ NUMBERED_HEADING_RE = re.compile(r"^\d+\.\s")
 # titre d'exo dans les fiches de séance. Rendus comme heading non-cochable.
 BOLD_HEADING_RE = re.compile(r"^\*\*([^*]+)\*\*\s*$")
 
+# Détection des tips techniques sous un exo, syntaxe blockquote markdown :
+# "> 💡 Pieds avant-pied sur step, talons dans le vide."
+# Rendu en italique gris non-cochable, sous l'item précédent.
+TIP_LINE_RE = re.compile(r"^>\s*(.+)$")
+
+# Préfixes de task-list à stripper (`- [ ] action` → `action`).
+TASK_LIST_CHECKED_PREFIXES = ("[ ] ", "[x] ", "[X] ")
+
 
 def _section_is_checklist(title_lower: str) -> bool:
     if title_lower in CHECKLIST_SECTION_TITLES:
@@ -128,6 +136,14 @@ def parse_protocol(body: str) -> dict[str, Any]:
             text = stripped[2:].strip()
             if not text:
                 continue
+            # Syntaxe GitHub task-list : strip le `[ ]` / `[x]` au début pour
+            # éviter qu'il s'affiche à côté de la checkbox de l'app.
+            for pref in TASK_LIST_CHECKED_PREFIXES:
+                if text.startswith(pref):
+                    text = text[len(pref):].strip()
+                    break
+            if not text:
+                continue
             item = {
                 "id": f"{current_section['id']}-{item_hash(text)}",
                 "text": text,
@@ -139,6 +155,28 @@ def parse_protocol(body: str) -> dict[str, Any]:
                 current_subsection["items"].append(item)
             else:
                 current_section["items"].append(item)
+            continue
+
+        # Tip technique en blockquote `> 💡 texte` : rendu en italique gris
+        # sous l'item précédent. Non-cochable.
+        tip_match = TIP_LINE_RE.match(stripped)
+        if tip_match and current_section is not None:
+            text = tip_match.group(1).strip()
+            if not text:
+                continue
+            tip_id_root = (
+                current_subsection["id"] if current_subsection is not None
+                else current_section["id"]
+            )
+            tip = {
+                "id": f"{tip_id_root}-t-{item_hash(text)}",
+                "text": text,
+                "kind": "note",
+            }
+            if current_subsection is not None:
+                current_subsection["items"].append(tip)
+            else:
+                current_section["items"].append(tip)
             continue
 
         # Paragraphe en gras isolé "**Exo 1 — ...**" → ajouté comme heading
