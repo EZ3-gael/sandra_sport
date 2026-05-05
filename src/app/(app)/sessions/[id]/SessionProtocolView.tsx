@@ -3,7 +3,11 @@
 import { useState, useTransition } from 'react';
 import { toggleItemCheck } from './actions';
 
-type ItemNode = { id: string; text: string; kind?: 'item' | 'heading' | 'note' };
+type ItemNode = {
+  id: string;
+  text: string;
+  kind?: 'item' | 'heading' | 'note' | 'paragraph';
+};
 
 type Subsection = {
   id: string;
@@ -195,6 +199,18 @@ function ItemRow({
     );
   }
 
+  // Paragraphe : prose libre (Go/No-Go, Pour info...). Texte plein, pas de
+  // puce ni de checkbox.
+  if (item.kind === 'paragraph') {
+    return (
+      <li className="text-sm leading-relaxed text-foreground">
+        <span
+          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
+        />
+      </li>
+    );
+  }
+
   if (type !== 'checklist') {
     return (
       <li className="flex gap-2 text-sm text-muted-foreground">
@@ -287,7 +303,10 @@ function countItems(
   const allItems: ItemNode[] = [
     ...section.items,
     ...section.subsections.flatMap((s) => s.items),
-  ].filter((i) => i.kind !== 'heading' && i.kind !== 'note');
+  ].filter(
+    (i) =>
+      i.kind !== 'heading' && i.kind !== 'note' && i.kind !== 'paragraph',
+  );
   const total = allItems.length;
   const checked = allItems.filter((i) => checkedIds.includes(i.id)).length;
   return { total, checked };
