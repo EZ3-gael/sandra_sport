@@ -24,7 +24,8 @@ CHECKLIST_SECTION_TITLES = {"protocole", "post-séance"}
 
 # Titres dépliés par défaut (sinon collapsed). Idem : les sections numérotées
 # (sections d'exécution) sont auto-expanded ; cette liste reste pour compat.
-EXPANDED_BY_DEFAULT = {"protocole"}
+# "Go / No-Go" est crucial à l'arrivée — toujours dépliée.
+EXPANDED_BY_DEFAULT = {"protocole", "go / no-go", "go/no-go", "go no-go"}
 
 # Préfixes (lower-cased) qui marquent une section comme checklist même si
 # elle a un suffixe libre, ex. "## Post-séance — récupération et hygiène".
@@ -201,8 +202,26 @@ def parse_protocol(body: str) -> dict[str, Any]:
                 current_section["items"].append(heading)
             continue
 
-        # Autres lignes (paragraphes, séparateurs gras) : on les ignore en V1.
-        # Elles resteront accessibles dans le champ `context` pour un affichage
-        # plein texte si besoin.
+        # Paragraphe en prose : ligne non-vide qui n'est ni H2/H3, ni item,
+        # ni heading, ni note, ni séparateur. Capturé comme item kind="paragraph"
+        # (rendu en texte plein côté app, non-cochable).
+        if line.strip() and current_section is not None:
+            text = line.strip()
+            # Skip horizontal rules and triple-blank separators
+            if text in ("---", "***", "___") or text.startswith("---"):
+                continue
+            para_id_root = (
+                current_subsection["id"] if current_subsection is not None
+                else current_section["id"]
+            )
+            para = {
+                "id": f"{para_id_root}-p-{item_hash(text)}",
+                "text": text,
+                "kind": "paragraph",
+            }
+            if current_subsection is not None:
+                current_subsection["items"].append(para)
+            else:
+                current_section["items"].append(para)
 
     return {"sections": sections}
