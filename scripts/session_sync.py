@@ -24,6 +24,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Force UTF-8 stdout/stderr — Windows defaults to cp1252 which crashes on
+# common output chars like → (U+2192). Must run before any print().
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+
 import frontmatter  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -38,7 +44,9 @@ SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
 SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 USER_ID = os.getenv("SANDRA_SPORT_USER_ID")
 
-DEFAULT_SEANCES_DIR = Path("D:/SANDRA/01_Brainstorming/sport-sante/seances-du-jour")
+DEFAULT_SEANCES_DIR = Path(
+    "D:/SANDRA/01_second-brain/02_areas/sport-health/seances-du-jour"
+)
 SEANCES_DIR = Path(os.getenv("SANDRA_SPORT_SEANCES_DIR") or DEFAULT_SEANCES_DIR)
 
 

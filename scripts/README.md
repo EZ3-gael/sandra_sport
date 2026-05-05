@@ -4,7 +4,7 @@ Utilitaires Python autonomes qui alimentent Supabase depuis le workspace local.
 
 ## `session_sync.py`
 
-Synchronise les séances `sport-sante/seances-du-jour/*.md` vers la table `public.sessions` de Supabase.
+Synchronise les séances `D:/SANDRA/01_second-brain/02_areas/sport-health/seances-du-jour/*.md` vers la table `public.sessions` de Supabase. Override possible via la variable d'env `SANDRA_SPORT_SEANCES_DIR`.
 
 Le parsing markdown → structure JSON est délégué à `session_parser.py` (module réutilisable, voir plus bas).
 
@@ -36,7 +36,16 @@ scripts/.venv/Scripts/python.exe scripts/session_sync.py
 
 Le script est **idempotent** : il upsert par `(user_id, source_file)`. Tu peux le rejouer, il ne duplique pas les séances.
 
-Chaque séance qu'on cale ensemble, Sandra écrit un `.md` daté dans `sport-sante/seances-du-jour/`. Tu relances ce script à la demande (ou via un hook Sandra plus tard) et la séance apparaît dans l'app mobile.
+⚠ Re-syncer un .md écrase la ligne en DB — y compris le `status`. Si tu as
+passé une séance en `done` côté app, **ne** rejoue **pas** le script sur ce
+.md sauf à mettre `status: done` dans son frontmatter avant. Pour ne sync
+qu'un sous-ensemble, copie les .md cibles dans un dossier temp et lance
+avec `SANDRA_SPORT_SEANCES_DIR=<chemin temp>`.
+
+Chaque séance qu'on cale ensemble, Sandra écrit un `.md` daté dans
+`01_second-brain/02_areas/sport-health/seances-du-jour/`. Tu relances ce
+script à la demande (ou via un hook Sandra plus tard) et la séance apparaît
+dans l'app mobile.
 
 ### Format attendu des .md
 
