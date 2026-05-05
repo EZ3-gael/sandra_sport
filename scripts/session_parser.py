@@ -18,12 +18,42 @@ from typing import Any
 
 
 # Titres (en minuscule) dont les items sont à cocher pendant l'exécution.
+# Compat héritée — les fiches récentes utilisent plutôt des H2 numérotées
+# (## 1. ..., ## 2. ...) qui sont auto-détectées comme checklists ci-dessous.
 CHECKLIST_SECTION_TITLES = {"protocole", "post-séance"}
 
-# Titres dépliés par défaut (sinon collapsed). Les autres sections (Contexte,
-# Signaux, Décisions, Références) sont collapsed par défaut pour un affichage
-# épuré pendant la séance.
+# Titres dépliés par défaut (sinon collapsed). Idem : les sections numérotées
+# (sections d'exécution) sont auto-expanded ; cette liste reste pour compat.
 EXPANDED_BY_DEFAULT = {"protocole"}
+
+# Préfixes (lower-cased) qui marquent une section comme checklist même si
+# elle a un suffixe libre, ex. "## Post-séance — récupération et hygiène".
+CHECKLIST_TITLE_PREFIXES = ("post-séance", "post-seance")
+
+# Détection des H2 numérotées : "1. Foo", "2. Bar"... → checklist + expanded.
+NUMBERED_HEADING_RE = re.compile(r"^\d+\.\s")
+
+# Détection des paragraphes en gras isolés "**Exo 1 — ...**" qui servent de
+# titre d'exo dans les fiches de séance. Rendus comme heading non-cochable.
+BOLD_HEADING_RE = re.compile(r"^\*\*([^*]+)\*\*\s*$")
+
+
+def _section_is_checklist(title_lower: str) -> bool:
+    if title_lower in CHECKLIST_SECTION_TITLES:
+        return True
+    if NUMBERED_HEADING_RE.match(title_lower):
+        return True
+    if any(title_lower.startswith(p) for p in CHECKLIST_TITLE_PREFIXES):
+        return True
+    return False
+
+
+def _section_is_expanded_default(title_lower: str) -> bool:
+    if title_lower in EXPANDED_BY_DEFAULT:
+        return True
+    if NUMBERED_HEADING_RE.match(title_lower):
+        return True
+    return False
 
 
 def slugify(value: str) -> str:
@@ -68,11 +98,12 @@ def parse_protocol(body: str) -> dict[str, Any]:
         if line.startswith("## "):
             title = line[3:].strip()
             title_lower = title.lower()
+            is_checklist = _section_is_checklist(title_lower)
             current_section = {
                 "id": slugify(title),
                 "title": title,
-                "type": "checklist" if title_lower in CHECKLIST_SECTION_TITLES else "notes",
-                "default_collapsed": title_lower not in EXPANDED_BY_DEFAULT,
+                "type": "checklist" if is_checklist else "notes",
+                "default_collapsed": not _section_is_expanded_default(title_lower),
                 "items": [],
                 "subsections": [],
             }
@@ -100,6 +131,7 @@ def parse_protocol(body: str) -> dict[str, Any]:
             item = {
                 "id": f"{current_section['id']}-{item_hash(text)}",
                 "text": text,
+                "kind": "item",
             }
             if current_subsection is not None:
                 # Préfixe avec la sous-section pour éviter collisions inter-sections
@@ -107,6 +139,28 @@ def parse_protocol(body: str) -> dict[str, Any]:
                 current_subsection["items"].append(item)
             else:
                 current_section["items"].append(item)
+            continue
+
+        # Paragraphe en gras isolé "**Exo 1 — ...**" → ajouté comme heading
+        # non-cochable. Sert de titre pour le bloc d'items qui suit (séries).
+        bold_match = BOLD_HEADING_RE.match(stripped)
+        if bold_match and current_section is not None:
+            text = bold_match.group(1).strip()
+            if not text:
+                continue
+            heading_id_root = (
+                current_subsection["id"] if current_subsection is not None
+                else current_section["id"]
+            )
+            heading = {
+                "id": f"{heading_id_root}-h-{item_hash(text)}",
+                "text": text,
+                "kind": "heading",
+            }
+            if current_subsection is not None:
+                current_subsection["items"].append(heading)
+            else:
+                current_section["items"].append(heading)
             continue
 
         # Autres lignes (paragraphes, séparateurs gras) : on les ignore en V1.

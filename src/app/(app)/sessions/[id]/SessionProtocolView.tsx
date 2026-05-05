@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { toggleItemCheck } from './actions';
 
-type ItemNode = { id: string; text: string };
+type ItemNode = { id: string; text: string; kind?: 'item' | 'heading' };
 
 type Subsection = {
   id: string;
@@ -169,6 +169,19 @@ function ItemRow({
   const [checked, setChecked] = useState(initiallyChecked);
   const [isPending, startTransition] = useTransition();
 
+  // Heading : titre d'exo non-cochable (ex. "**Exo 1 — Mollets chargés**").
+  // S'affiche en gras, sans puce ni checkbox, avec un peu de marge supérieure
+  // pour séparer visuellement les blocs d'exos dans une même sous-section.
+  if (item.kind === 'heading') {
+    return (
+      <li className="pt-2 text-sm font-semibold text-foreground first:pt-0">
+        <span
+          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
+        />
+      </li>
+    );
+  }
+
   if (type !== 'checklist') {
     return (
       <li className="flex gap-2 text-sm text-muted-foreground">
@@ -261,7 +274,7 @@ function countItems(
   const allItems: ItemNode[] = [
     ...section.items,
     ...section.subsections.flatMap((s) => s.items),
-  ];
+  ].filter((i) => i.kind !== 'heading');
   const total = allItems.length;
   const checked = allItems.filter((i) => checkedIds.includes(i.id)).length;
   return { total, checked };
