@@ -7,6 +7,7 @@ import {
   type AchillesVerdict,
   type SubjectiveVerdict,
 } from '@/lib/verdict/verdict-style';
+import { SwipeToDismissCard } from '@/components/features/swipe-to-dismiss-card';
 
 type CheckinRow = MorningCheckin & {
   id: string;
@@ -65,12 +66,13 @@ export default async function HomePage() {
     .returns<CheckinRow[]>();
   const todayCheckin = todayCheckins?.[0] ?? null;
 
-  // Séance du jour (planned ou done)
+  // Séance du jour (planned ou done) — exclut les séances dismissed
   const { data: todaySessions } = await supabase
     .from('sessions')
     .select('id, date, slot, planned_start_time, title, session_type, status')
     .eq('user_id', user!.id)
     .eq('date', today)
+    .is('dismissed_at', null)
     .order('planned_start_time', { ascending: true, nullsFirst: false })
     .returns<SessionRow[]>();
 
@@ -83,6 +85,7 @@ export default async function HomePage() {
           .select('id, date, slot, planned_start_time, title, session_type, status')
           .eq('user_id', user!.id)
           .eq('status', 'planned')
+          .is('dismissed_at', null)
           .gt('date', today)
           .order('date', { ascending: true })
           .limit(1)
@@ -94,6 +97,7 @@ export default async function HomePage() {
     .select('id, date, slot, planned_start_time, title, session_type, status')
     .eq('user_id', user!.id)
     .eq('status', 'done')
+    .is('dismissed_at', null)
     .lt('date', today)
     .order('date', { ascending: false })
     .limit(1)
@@ -155,13 +159,25 @@ export default async function HomePage() {
       {todaySessions && todaySessions.length > 0 ? (
         <ul className="space-y-2">
           {todaySessions.map((s) => (
-            <SessionCard key={s.id} session={s} />
+            <SwipeToDismissCard
+              key={s.id}
+              sessionId={s.id}
+              sessionTitle={s.title}
+            >
+              <SessionCardContent session={s} />
+            </SwipeToDismissCard>
           ))}
         </ul>
       ) : nextSessions && nextSessions.length > 0 ? (
         <ul className="space-y-2">
           {nextSessions.map((s) => (
-            <SessionCard key={s.id} session={s} />
+            <SwipeToDismissCard
+              key={s.id}
+              sessionId={s.id}
+              sessionTitle={s.title}
+            >
+              <SessionCardContent session={s} />
+            </SwipeToDismissCard>
           ))}
         </ul>
       ) : (
@@ -177,7 +193,13 @@ export default async function HomePage() {
           <SectionHeader>Dernière séance</SectionHeader>
           <ul className="space-y-2">
             {lastDone.map((s) => (
-              <SessionCard key={s.id} session={s} />
+              <SwipeToDismissCard
+                key={s.id}
+                sessionId={s.id}
+                sessionTitle={s.title}
+              >
+                <SessionCardContent session={s} />
+              </SwipeToDismissCard>
             ))}
           </ul>
         </>
@@ -356,31 +378,29 @@ function CheckinTimelineRow({ entry }: { entry: CheckinRow }) {
   );
 }
 
-function SessionCard({ session }: { session: SessionRow }) {
+function SessionCardContent({ session }: { session: SessionRow }) {
   return (
-    <li>
-      <Link
-        href={`/sessions/${session.id}`}
-        className="block rounded-lg border border-border bg-card p-4 transition hover:border-primary/50"
-      >
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="font-medium">{session.title}</span>
-          <span className="text-xs text-muted-foreground">
-            {session.date}
-            {session.slot ? ` · ${session.slot}` : ''}
-            {session.planned_start_time ? ` · ${session.planned_start_time.slice(0, 5)}` : ''}
+    <Link
+      href={`/sessions/${session.id}`}
+      className="block rounded-lg border border-border bg-card p-4 transition hover:border-primary/50"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-medium">{session.title}</span>
+        <span className="text-xs text-muted-foreground">
+          {session.date}
+          {session.slot ? ` · ${session.slot}` : ''}
+          {session.planned_start_time ? ` · ${session.planned_start_time.slice(0, 5)}` : ''}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center gap-2 text-xs">
+        {session.session_type && (
+          <span className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground">
+            {session.session_type}
           </span>
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-xs">
-          {session.session_type && (
-            <span className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground">
-              {session.session_type}
-            </span>
-          )}
-          <StatusBadge status={session.status} />
-        </div>
-      </Link>
-    </li>
+        )}
+        <StatusBadge status={session.status} />
+      </div>
+    </Link>
   );
 }
 
