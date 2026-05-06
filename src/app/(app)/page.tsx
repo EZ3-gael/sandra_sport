@@ -1,10 +1,18 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { type MorningCheckin } from '@/lib/validations/wellness';
+import {
+  ACHILLES_VERDICT_STYLE,
+  SUBJECTIVE_VERDICT_STYLE,
+  type AchillesVerdict,
+  type SubjectiveVerdict,
+} from '@/lib/verdict/verdict-style';
 
 type CheckinRow = MorningCheckin & {
   id: string;
   captured_at: string;
+  verdict: SubjectiveVerdict | null;
+  verdict_message: string | null;
 };
 
 type AchillesEvalRow = {
@@ -13,6 +21,8 @@ type AchillesEvalRow = {
   captured_at: string;
   score_max: number | null;
   bonus_heel_off_done: boolean | null;
+  verdict: AchillesVerdict | null;
+  verdict_message: string | null;
 };
 
 type SessionRow = {
@@ -37,7 +47,9 @@ export default async function HomePage() {
   // Auto-éval Achille du jour (1/jour, contrainte unique)
   const { data: todayAchilles } = await supabase
     .from('achilles_morning_eval')
-    .select('id, date, captured_at, score_max, bonus_heel_off_done')
+    .select(
+      'id, date, captured_at, score_max, bonus_heel_off_done, verdict, verdict_message',
+    )
     .eq('user_id', user!.id)
     .eq('date', today)
     .maybeSingle<AchillesEvalRow>();
@@ -242,14 +254,8 @@ function AchillesSummaryCard({ entry }: { entry: AchillesEvalRow }) {
     hour: '2-digit',
     minute: '2-digit',
   });
-  const colorClass =
-    entry.score_max === null
-      ? 'text-muted-foreground'
-      : entry.score_max >= 4
-        ? 'text-red-500'
-        : entry.score_max >= 2
-          ? 'text-amber-500'
-          : 'text-emerald-500';
+  const verdictStyle = entry.verdict ? ACHILLES_VERDICT_STYLE[entry.verdict] : null;
+  const borderClass = verdictStyle?.border ?? 'border-border';
   const bonusBadge =
     entry.bonus_heel_off_done === true
       ? '✓ bonus'
@@ -259,14 +265,14 @@ function AchillesSummaryCard({ entry }: { entry: AchillesEvalRow }) {
   return (
     <Link
       href="/auto-eval/dashboard"
-      className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/50"
+      className={`rounded-xl border-2 bg-card p-4 transition hover:opacity-90 ${borderClass}`}
     >
       <div className="flex items-baseline justify-between">
         <h3 className="text-sm font-semibold">Auto-éval Achille</h3>
         <span className="text-xs text-muted-foreground">{time}</span>
       </div>
       <div className="mt-1 flex items-baseline gap-3">
-        <span className={`text-2xl font-semibold tabular-nums ${colorClass}`}>
+        <span className="text-2xl font-semibold tabular-nums text-foreground">
           {entry.score_max === null ? '—' : `${entry.score_max}/10`}
         </span>
         {bonusBadge && (
@@ -276,6 +282,13 @@ function AchillesSummaryCard({ entry }: { entry: AchillesEvalRow }) {
         )}
         <span className="ml-auto text-xs text-primary">voir le suivi →</span>
       </div>
+      {verdictStyle && (
+        <span
+          className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${verdictStyle.badge}`}
+        >
+          {verdictStyle.label}
+        </span>
+      )}
     </Link>
   );
 }
@@ -286,29 +299,30 @@ function WellnessSummaryCard({ entry }: { entry: CheckinRow }) {
     minute: '2-digit',
   });
   const avg = averageScoreNumber(entry);
-  const colorClass =
-    avg === null
-      ? 'text-muted-foreground'
-      : avg >= 4
-        ? 'text-emerald-500'
-        : avg >= 2.5
-          ? 'text-amber-500'
-          : 'text-red-500';
+  const verdictStyle = entry.verdict ? SUBJECTIVE_VERDICT_STYLE[entry.verdict] : null;
+  const borderClass = verdictStyle?.border ?? 'border-border';
   return (
     <Link
       href="/wellness/dashboard"
-      className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/50"
+      className={`rounded-xl border-2 bg-card p-4 transition hover:opacity-90 ${borderClass}`}
     >
       <div className="flex items-baseline justify-between">
         <h3 className="text-sm font-semibold">Auto-éval Ressenti</h3>
         <span className="text-xs text-muted-foreground">{time}</span>
       </div>
       <div className="mt-1 flex items-baseline gap-3">
-        <span className={`text-2xl font-semibold tabular-nums ${colorClass}`}>
+        <span className="text-2xl font-semibold tabular-nums text-foreground">
           {avg === null ? '—' : `${avg.toFixed(1)}/5`}
         </span>
         <span className="ml-auto text-xs text-primary">voir le suivi →</span>
       </div>
+      {verdictStyle && (
+        <span
+          className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${verdictStyle.badge}`}
+        >
+          {verdictStyle.label}
+        </span>
+      )}
     </Link>
   );
 }
