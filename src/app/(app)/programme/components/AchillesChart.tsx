@@ -1,24 +1,31 @@
 /**
  * Mini bar-chart CSS du score Achille sur 30 jours, sans dépendance externe.
  * V1.5e3 remplacera par recharts (animations, tooltip riche, export).
+ *
+ * Source : achilles_morning_eval (depuis migration 011). On affiche `score_max`
+ * (pire des 4 sous-scores) — le détail des 4 sous-scores vit dans le dashboard
+ * /auto-eval/dashboard (4 mini-charts en grille).
  */
 
 import { addDaysIso, todayIso, type IsoDate } from '@/lib/programme/dates';
-import { dailyMaxAchilles, type AchillesCheckin } from '@/lib/programme/achilles-streak';
+import {
+  indexAchillesEvalsByDay,
+  type AchillesEvalDay,
+} from '@/lib/programme/achilles-streak';
 
 type AchillesChartProps = {
-  checkins: AchillesCheckin[];
+  evals: AchillesEvalDay[];
   hsrSessionDays: IsoDate[]; // jours où une séance HSR a eu lieu (pour décor)
 };
 
 const SCALE_MAX = 10;
 
 export function AchillesChart({
-  checkins,
+  evals,
   hsrSessionDays,
 }: AchillesChartProps) {
   const today = todayIso();
-  const byDay = dailyMaxAchilles(checkins);
+  const byDay = indexAchillesEvalsByDay(evals);
   const hsrSet = new Set(hsrSessionDays);
 
   const days: { date: IsoDate; score: number | null; isHsr: boolean }[] = [];
@@ -109,7 +116,7 @@ export function AchillesChart({
       ) : (
         <p className="mt-3 text-sm text-muted-foreground italic">
           Pas encore de score Achille saisi sur les 30 derniers jours. Ajoute-le
-          dans ton check-in matinal.
+          dans l&apos;auto-éval matinale.
         </p>
       )}
     </section>

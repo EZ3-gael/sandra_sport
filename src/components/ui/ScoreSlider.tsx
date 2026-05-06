@@ -3,11 +3,15 @@
 import { useState } from 'react';
 
 /**
- * RpeSlider — saisie d'un score entier via curseur snap-grid.
+ * ScoreSlider — saisie d'un score entier via curseur snap-grid.
+ *
+ * Conçu pour deux usages principaux :
+ *   - RPE séances (1-10) : `min={1} max={10}` (défaut)
+ *   - Douleur 0-10 : `min={0} max={10}` (auto-éval Achille, mesures cliniques)
  *
  * Design :
  * - Track horizontal avec tick marks visibles à chaque cran entier.
- * - Chiffres 1..max sous la barre, **cliquables** (double usage : drag ET tap).
+ * - Chiffres min..max sous la barre, **cliquables** (double usage : drag ET tap).
  * - Chiffre actif en highlight primary. Pas de "gros carré valeur" redondant —
  *   le chiffre actif sous la barre suffit, et il reste visible même quand le
  *   doigt est sur le thumb.
@@ -19,36 +23,48 @@ import { useState } from 'react';
  *   un score si l'athlete ne l'a pas exprimé).
  *
  * Usage typique dans un form natif Server Action :
- *   <RpeSlider name="rpe" defaultValue={null} max={10} />
- *   -> input caché name="rpe" avec value="1..max" ou "" si null.
+ *   <ScoreSlider name="rpe" min={1} max={10} defaultValue={null} />
+ *   <ScoreSlider name="score_rest" min={0} max={10} defaultValue={null} />
+ *   -> input caché name=... avec value="<int>" ou "" si null.
  */
-export function RpeSlider({
+export function ScoreSlider({
   name,
   defaultValue = null,
+  min = 1,
   max = 10,
   guidance = null,
   label,
   low,
   high,
+  onValueChange,
 }: {
   name: string;
   defaultValue?: number | null;
+  min?: number;
   max?: number;
   guidance?: number | null;
   label?: string;
   low?: string;
   high?: string;
+  /** Callback notifié à chaque changement (uncontrolled : state interne géré). */
+  onValueChange?: (next: number | null) => void;
 }) {
-  const [value, setValue] = useState<number | null>(defaultValue);
-  const values = Array.from({ length: max }, (_, i) => i + 1);
+  const [value, setValueRaw] = useState<number | null>(defaultValue);
+  const setValue = (next: number | null) => {
+    setValueRaw(next);
+    onValueChange?.(next);
+  };
+  const range = max - min;
+  const values = Array.from({ length: range + 1 }, (_, i) => i + min);
+  const middle = min + Math.floor(range / 2);
 
-  const percentOf = (n: number) => ((n - 1) / (max - 1)) * 100;
+  const percentOf = (n: number) => (range === 0 ? 0 : ((n - min) / range) * 100);
   const valuePct = value !== null ? percentOf(value) : null;
   const guidancePct =
     guidance !== null && guidance !== undefined ? percentOf(guidance) : null;
 
-  const lowLabel = low ?? '1 — très facile';
-  const highLabel = high ?? `${max} — effort maximal`;
+  const lowLabel = low ?? `${min}`;
+  const highLabel = high ?? `${max}`;
 
   return (
     <fieldset className="space-y-3">
@@ -56,7 +72,7 @@ export function RpeSlider({
 
       <input type="hidden" name={name} value={value ?? ''} />
 
-      {/* Chiffres 1..max au-dessus de la barre — cliquables, actif en highlight */}
+      {/* Chiffres min..max au-dessus de la barre — cliquables, actif en highlight */}
       <div className="flex justify-between px-0.5">
         {values.map((n) => {
           const isActive = value === n;
@@ -84,7 +100,7 @@ export function RpeSlider({
         {/* Track de fond (gris neutre) */}
         <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-muted" />
 
-        {/* Zone jusqu'au guidance — jauge pâle (V1.5e, non utilisée V1.5a) */}
+        {/* Zone jusqu'au guidance — jauge pâle */}
         {guidancePct !== null && (
           <div
             className="absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-primary/25"
@@ -133,14 +149,14 @@ export function RpeSlider({
         {/* Input range transparent — capture le drag sur toute la largeur */}
         <input
           type="range"
-          min={1}
+          min={min}
           max={max}
           step={1}
-          value={value ?? Math.ceil(max / 2)}
+          value={value ?? middle}
           onChange={(e) => setValue(parseInt(e.target.value, 10))}
           onPointerDown={() => {
             if (value === null) {
-              setValue(Math.ceil(max / 2));
+              setValue(middle);
             }
           }}
           aria-label={label ?? name}

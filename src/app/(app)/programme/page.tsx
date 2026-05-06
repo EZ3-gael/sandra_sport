@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import {
   addDaysIso,
@@ -8,12 +9,12 @@ import {
 } from '@/lib/programme/dates';
 import {
   computeAchillesStreak,
-  dailyMaxAchilles,
-  type AchillesCheckin,
+  indexAchillesEvalsByDay,
+  type AchillesEvalDay,
 } from '@/lib/programme/achilles-streak';
 import {
   evaluatePalierConditions,
-  type WellnessCheckin,
+  type SleepCheckin,
 } from '@/lib/programme/palier-conditions';
 import { PhaseHeader } from './components/PhaseHeader';
 import {
@@ -46,11 +47,16 @@ type ProgramPhaseRow = {
   notes: string | null;
 };
 
-type CheckinRow = {
+type SleepCheckinRow = {
   id: string;
   date: string;
-  achilles_score: number | null;
   sleep_quality: number | null;
+};
+
+type AchillesEvalRow = {
+  id: string;
+  date: string;
+  score_max: number | null;
 };
 
 type SessionRow = {
@@ -82,7 +88,8 @@ export default async function ProgrammePage() {
   const [
     phaseRes,
     todaySessionRes,
-    checkinsRes,
+    achillesEvalsRes,
+    sleepCheckinsRes,
     hsrLogsRes,
     monthlyMarkersRes,
   ] = await Promise.all([
@@ -100,12 +107,19 @@ export default async function ProgrammePage() {
       .limit(1)
       .returns<SessionRow[]>(),
     supabase
-      .from('morning_checkin')
-      .select('id, date, achilles_score, sleep_quality')
+      .from('achilles_morning_eval')
+      .select('id, date, score_max')
       .eq('user_id', userId)
       .gte('date', thirtyDaysAgo)
       .order('date', { ascending: false })
-      .returns<CheckinRow[]>(),
+      .returns<AchillesEvalRow[]>(),
+    supabase
+      .from('morning_checkin')
+      .select('id, date, sleep_quality')
+      .eq('user_id', userId)
+      .gte('date', thirtyDaysAgo)
+      .order('date', { ascending: false })
+      .returns<SleepCheckinRow[]>(),
     supabase
       .from('hsr_exercise_log')
       .select('exercise_key, performed_at, charge_kg, reps, rpe, pain_during')
@@ -124,7 +138,12 @@ export default async function ProgrammePage() {
 
   const phase = phaseRes.data ?? null;
   const todaySession = todaySessionRes.data?.[0] ?? null;
-  const checkins = checkinsRes.data ?? [];
+  const achillesEvals: AchillesEvalDay[] = (achillesEvalsRes.data ?? []).map(
+    (e) => ({ date: e.date, score_max: e.score_max }),
+  );
+  const sleepCheckins: SleepCheckin[] = (sleepCheckinsRes.data ?? []).map(
+    (c) => ({ date: c.date, sleep_quality: c.sleep_quality }),
+  );
   const hsrLogs = hsrLogsRes.data ?? [];
   const monthlyMarkers = monthlyMarkersRes.data ?? [];
 
@@ -141,16 +160,10 @@ export default async function ProgrammePage() {
   }
 
   // Calculs métier
-  const checkinsForCalc: WellnessCheckin[] = checkins.map((c) => ({
-    date: c.date,
-    achilles_score: c.achilles_score,
-    sleep_quality: c.sleep_quality,
-  }));
-  const achilleCheckins: AchillesCheckin[] = checkinsForCalc;
-
-  const streak = computeAchillesStreak(achilleCheckins, 1, today);
+  const streak = computeAchillesStreak(achillesEvals, 1, today);
   const conditions = evaluatePalierConditions({
-    checkins: checkinsForCalc,
+    achillesEvals,
+    sleepCheckins,
     hsrLogs: hsrLogs.map((l) => ({
       performed_at: l.performed_at,
       pain_during: l.pain_during,
@@ -158,8 +171,8 @@ export default async function ProgrammePage() {
     from: today,
   });
 
-  // Score Achille du jour (max si plusieurs check-ins) pour le bandeau
-  const byDay = dailyMaxAchilles(achilleCheckins);
+  // Score Achille du jour pour le bandeau
+  const byDay = indexAchillesEvalsByDay(achillesEvals);
   const todayAchillesScore = byDay.get(today) ?? null;
 
   // Compteur jours consécutifs ≥ 3 (pour bandeau orange)
@@ -203,6 +216,20 @@ export default async function ProgrammePage() {
         <p className="mt-1 text-xs text-muted-foreground">
           Pilotage du protocole phase 1 — tendinopathie Achille.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href="/auto-eval"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+          >
+            Saisir auto-éval
+          </Link>
+          <Link
+            href="/auto-eval/dashboard"
+            className="rounded-md border border-border bg-input px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            Voir le suivi
+          </Link>
+        </div>
       </header>
 
       <PainAlert
@@ -230,7 +257,7 @@ export default async function ProgrammePage() {
       />
 
       <AchillesChart
-        checkins={achilleCheckins}
+        evals={achillesEvals}
         hsrSessionDays={hsrSessionDays}
       />
 

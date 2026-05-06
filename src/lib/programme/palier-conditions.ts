@@ -7,18 +7,24 @@
  *   - 'red'    : alerte, on régresse (ou pas de donnée pour conclure)
  *
  * Les 4 conditions sont indépendantes — c'est l'UI qui décide quoi en faire.
+ *
+ * Sources des données depuis migration 011 :
+ *   - score Achille → table `achilles_morning_eval` (1/jour, 4 sous-scores + max)
+ *   - sommeil       → table `morning_checkin.sleep_quality`
+ *   - douleur HSR   → table `hsr_exercise_log.pain_during`
  */
 
 import { addDaysIso, todayIso, type IsoDate } from './dates';
 import {
   computeAchillesStreak,
-  dailyMaxAchilles,
-  type AchillesCheckin,
+  indexAchillesEvalsByDay,
+  type AchillesEvalDay,
 } from './achilles-streak';
 
 export type Tricolor = 'green' | 'orange' | 'red';
 
-export type WellnessCheckin = AchillesCheckin & {
+export type SleepCheckin = {
+  date: IsoDate;
   sleep_quality: number | null;
 };
 
@@ -41,10 +47,10 @@ export type PalierConditions = {
  *   red    : streak < 3
  */
 export function evaluateAchillesScoreCondition(
-  checkins: AchillesCheckin[],
+  evals: AchillesEvalDay[],
   from: IsoDate = todayIso(),
 ): Tricolor {
-  const streak = computeAchillesStreak(checkins, 2, from);
+  const streak = computeAchillesStreak(evals, 2, from);
   if (streak >= 5) return 'green';
   if (streak >= 3) return 'orange';
   return 'red';
@@ -63,7 +69,6 @@ export function evaluateHsrPainCondition(hsrLogs: HsrLog[]): Tricolor {
   const distinct: HsrLog[] = [];
   for (const l of hsrLogs) {
     if (seen.has(l.performed_at)) continue;
-    // Conserve la pire douleur du jour
     seen.add(l.performed_at);
     const sameDay = hsrLogs.filter((x) => x.performed_at === l.performed_at);
     const worst = sameDay.reduce<number | null>((acc, x) => {
@@ -90,10 +95,10 @@ export function evaluateHsrPainCondition(hsrLogs: HsrLog[]): Tricolor {
  *   red    : au moins un flare-up détecté
  */
 export function evaluateNoFlareUpCondition(
-  checkins: AchillesCheckin[],
+  evals: AchillesEvalDay[],
   hsrLogs: HsrLog[],
 ): Tricolor {
-  const byDay = dailyMaxAchilles(checkins);
+  const byDay = indexAchillesEvalsByDay(evals);
   const distinctSessionDays: IsoDate[] = [];
   const seen = new Set<IsoDate>();
   for (const l of hsrLogs) {
@@ -123,12 +128,11 @@ export function evaluateNoFlareUpCondition(
  *   red    : < 2.5 OU 0 donnée
  */
 export function evaluateSleepCondition(
-  checkins: WellnessCheckin[],
+  checkins: SleepCheckin[],
   from: IsoDate = todayIso(),
 ): Tricolor {
-  // Une seule valeur par jour pour la moyenne : on prend la dernière saisie
-  // disponible (ordre input non garanti, on prend le max valide pour rester
-  // déterministe).
+  // Une seule valeur par jour pour la moyenne : on prend le max valide pour
+  // rester déterministe en cas de plusieurs check-ins par jour.
   const byDay = new Map<IsoDate, number>();
   for (const c of checkins) {
     if (c.sleep_quality === null) continue;
@@ -152,15 +156,16 @@ export function evaluateSleepCondition(
 
 /** Évalue les 4 conditions et renvoie un objet groupé. */
 export function evaluatePalierConditions(input: {
-  checkins: WellnessCheckin[];
+  achillesEvals: AchillesEvalDay[];
+  sleepCheckins: SleepCheckin[];
   hsrLogs: HsrLog[];
   from?: IsoDate;
 }): PalierConditions {
   const from = input.from ?? todayIso();
   return {
-    scoreOk: evaluateAchillesScoreCondition(input.checkins, from),
+    scoreOk: evaluateAchillesScoreCondition(input.achillesEvals, from),
     painHsrOk: evaluateHsrPainCondition(input.hsrLogs),
-    noFlareUp: evaluateNoFlareUpCondition(input.checkins, input.hsrLogs),
-    sleepOk: evaluateSleepCondition(input.checkins, from),
+    noFlareUp: evaluateNoFlareUpCondition(input.achillesEvals, input.hsrLogs),
+    sleepOk: evaluateSleepCondition(input.sleepCheckins, from),
   };
 }
