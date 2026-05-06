@@ -33,13 +33,13 @@ export default async function WellnessPage({
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-6">
       {saved && (
-        <Banner tone="success">Check-in enregistré.</Banner>
+        <Banner tone="success">Auto-éval enregistrée.</Banner>
       )}
       {updated && (
-        <Banner tone="success">Check-in mis à jour.</Banner>
+        <Banner tone="success">Auto-éval mise à jour.</Banner>
       )}
       {deleted && (
-        <Banner tone="success">Check-in supprimé.</Banner>
+        <Banner tone="success">Auto-éval supprimée.</Banner>
       )}
       {errorMsg && (
         <Banner tone="error">{errorMsg}</Banner>
