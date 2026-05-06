@@ -129,6 +129,7 @@ export function AutoEvalClient({
               name={m.key}
               min={0}
               max={10}
+              compact
               defaultValue={scores[m.key]}
               low="0 — aucune douleur"
               high="10 — douleur maximale"
@@ -345,6 +346,7 @@ function BonusHeelOffSection({
             name="bonus_heel_off_pain"
             min={0}
             max={10}
+            compact
             defaultValue={defaultPain}
             low="0"
             high="10"

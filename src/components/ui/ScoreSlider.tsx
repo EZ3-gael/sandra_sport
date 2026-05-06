@@ -9,12 +9,16 @@ import { useState } from 'react';
  *   - RPE séances (1-10) : `min={1} max={10}` (défaut)
  *   - Douleur 0-10 : `min={0} max={10}` (auto-éval Achille, mesures cliniques)
  *
- * Design :
+ * Deux modes d'affichage :
+ *   - défaut : tous les chiffres min..max au-dessus de la barre, cliquables.
+ *     Tient pour 10 valeurs ou moins. Au-delà, l'écran mobile déborde.
+ *   - `compact` : un seul carré centré affichant la valeur courante (avec code
+ *     couleur douleur emerald/amber/red). Pas de tap direct sur un chiffre,
+ *     mais le tap sur la barre fonctionne via l'<input type="range"> natif.
+ *     Recommandé pour 0-10 et tout range trop large pour la rangée standard.
+ *
+ * Design commun :
  * - Track horizontal avec tick marks visibles à chaque cran entier.
- * - Chiffres min..max sous la barre, **cliquables** (double usage : drag ET tap).
- * - Chiffre actif en highlight primary. Pas de "gros carré valeur" redondant —
- *   le chiffre actif sous la barre suffit, et il reste visible même quand le
- *   doigt est sur le thumb.
  * - Thumb visuel rond au-dessus de la valeur courante (purement visuel, le
  *   drag est géré par un <input type="range"> invisible superposé).
  * - Si `guidance` fourni : jauge pâle jusqu'à la valeur conseillée + marqueur
@@ -24,7 +28,7 @@ import { useState } from 'react';
  *
  * Usage typique dans un form natif Server Action :
  *   <ScoreSlider name="rpe" min={1} max={10} defaultValue={null} />
- *   <ScoreSlider name="score_rest" min={0} max={10} defaultValue={null} />
+ *   <ScoreSlider name="score_rest" min={0} max={10} compact defaultValue={null} />
  *   -> input caché name=... avec value="<int>" ou "" si null.
  */
 export function ScoreSlider({
@@ -36,6 +40,7 @@ export function ScoreSlider({
   label,
   low,
   high,
+  compact = false,
   onValueChange,
 }: {
   name: string;
@@ -46,6 +51,12 @@ export function ScoreSlider({
   label?: string;
   low?: string;
   high?: string;
+  /**
+   * Mode compact : remplace la rangée de chiffres par un seul carré central
+   * affichant la valeur courante. Recommandé pour les ranges qui débordent
+   * sur mobile (typiquement 0-10 = 11 chiffres).
+   */
+  compact?: boolean;
   /** Callback notifié à chaque changement (uncontrolled : state interne géré). */
   onValueChange?: (next: number | null) => void;
 }) {
@@ -72,28 +83,31 @@ export function ScoreSlider({
 
       <input type="hidden" name={name} value={value ?? ''} />
 
-      {/* Chiffres min..max au-dessus de la barre — cliquables, actif en highlight */}
-      <div className="flex justify-between px-0.5">
-        {values.map((n) => {
-          const isActive = value === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setValue(n)}
-              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold transition ${
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-              aria-label={`Sélectionner ${n}`}
-              aria-pressed={isActive}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
+      {compact ? (
+        <CurrentValueCard value={value} max={max} />
+      ) : (
+        <div className="flex justify-between px-0.5">
+          {values.map((n) => {
+            const isActive = value === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setValue(n)}
+                className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+                aria-label={`Sélectionner ${n}`}
+                aria-pressed={isActive}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Zone du slider : track + ticks + thumb visuel + input range invisible */}
       <div className="relative h-10 select-none">
@@ -174,7 +188,9 @@ export function ScoreSlider({
       <div className="flex min-h-[24px] items-center justify-between text-xs">
         {value === null ? (
           <span className="text-muted-foreground">
-            Glisse le curseur ou tape un chiffre.
+            {compact
+              ? 'Glisse le curseur ou tape sur la barre.'
+              : 'Glisse le curseur ou tape un chiffre.'}
           </span>
         ) : (
           <>
@@ -199,5 +215,39 @@ export function ScoreSlider({
         )}
       </div>
     </fieldset>
+  );
+}
+
+/**
+ * Carré centré affichant la valeur courante (ou "—" si null).
+ * Code couleur sémantique douleur 0-10 : vert ≤ 1, amber 2-3, rouge ≥ 4.
+ * Pour les ranges sans sémantique douleur (ex. RPE), le mode compact n'est
+ * en pratique pas utilisé, mais le code couleur reste cohérent (un score
+ * élevé reste un signal d'alerte côté coach).
+ */
+function CurrentValueCard({
+  value,
+  max,
+}: {
+  value: number | null;
+  max: number;
+}) {
+  const colorClass =
+    value === null
+      ? 'border-border bg-muted text-muted-foreground'
+      : value >= 4
+        ? 'border-red-500 bg-red-500 text-white'
+        : value >= 2
+          ? 'border-amber-500 bg-amber-500 text-white'
+          : 'border-emerald-500 bg-emerald-500 text-white';
+  return (
+    <div className="flex justify-center">
+      <div
+        className={`flex h-14 w-20 items-center justify-center rounded-lg border-2 text-2xl font-semibold tabular-nums transition-colors ${colorClass}`}
+        aria-live="polite"
+      >
+        {value === null ? '—' : `${value}/${max}`}
+      </div>
+    </div>
   );
 }
