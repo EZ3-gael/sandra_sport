@@ -1,7 +1,7 @@
 # Sandra Wellness — Roadmap
 
 > **Dernière refonte : 2026-04-23**
-> **Dernière mise à jour : 2026-05-06** (ajout V1.5e auto-éval tendon)
+> **Dernière mise à jour : 2026-05-06** (ajout V1.5f verdict auto-synthèse Achille + Ressenti)
 > Source de vérité pour les jalons long terme. Pour les détails tactiques, voir les `notes/` (vision globale, module recettes, pivot 3 piliers, benchmark).
 >
 > **Nom de code intérimaire** : `sandra-wellness`. Nom produit final à trancher avant V2 (ouverture publique). Dossier `sandra_sport/` **non renommé** pour l'instant (rename différé au moment du nom final, pour éviter de renommer deux fois). Voir [`notes/vision-globale.md`](./notes/vision-globale.md).
@@ -184,6 +184,47 @@ Livré dans la branche `feature/auto-eval-tendon` (PR à merger), juste avant W1
 - Notification push matinale (pas en V1).
 - Multi-tendons gauche/droit (mono-tendon droit, ajout futur via colonne `side` si besoin).
 - Compliance toe raises G + marche consciente attaque talon-pointe (sous-protocole proprio, page dédiée future).
+
+### V1.5f — Verdict auto-synthèse Achille + Ressenti [DONE le 2026-05-06]
+
+Livré dans la foulée de V1.5e, le même jour. Objectif : encapsuler en base de données la logique de synthèse "Go/No-Go HSR" et la lecture qualitative du ressenti, pour qu'**une seule source de vérité** alimente à la fois l'app (affichage utilisateur) et l'assistant Sandra côté workspace `sport-health` (recommandations coaching). Plus de divergence possible entre ce que voit Gaël dans l'app et ce qu'analyse Sandra.
+
+**Déclencheur** : la règle Go/No-Go historique `score_max ≥ 3/10 → HSR annulé` était trop stricte pour une tendinopathie chronique — elle confondait la raideur matinale ("morning stiffness") chronique normale avec un signal d'irritabilité aiguë. Refonte de la règle vers un modèle composite cohérent avec la littérature (Silbernagel pain monitoring, JOSPT 2024 CPG midportion Achilles tendinopathy, Cook & Purdam tendon pain model).
+
+**DB — migration 012 (`012_verdict_auto_synthesis.sql`)** :
+- 4 fonctions SQL `IMMUTABLE` dans `public.*` : `compute_achilles_verdict`, `compute_achilles_message`, `compute_subjective_verdict`, `compute_subjective_message`.
+- 4 colonnes générées `STORED` : `achilles_morning_eval.verdict` + `verdict_message`, `morning_checkin.verdict` + `verdict_message`. Recalculées automatiquement à chaque INSERT/UPDATE par PostgreSQL.
+
+**Règle Achille** (composite, chaque test évalué selon sa nature) :
+- 🟢 `GREEN` (HSR autorisé en pleine prescription) : tous les tests fonctionnels propres (raises ≤ 3, palpation ≤ 3, heel-off ≤ 3) ET morning stiffness ≤ 5.
+- 🟡 `AMBER` (HSR adapté : 3 séries, charge -2 kg, RPE plafonné 7) : un test fonctionnel intermédiaire OU morning stiffness 6-7.
+- 🔴 `RED` (HSR annulé, bascule vélo Z1) : `raises_quality='impossible'` OU un test fonctionnel ≥ 6 OU morning stiffness ≥ 8.
+
+**Règle Ressenti** (hiérarchique, premier matché gagne) :
+- 🟢 `OPTIMAL` — toutes dimensions ≥ 4.
+- 🟡 `VIGILANCE` — état moyen sans signal fort.
+- 🔵 `MENTAL` — axe mental/humeur/motivation/calme bas, physique solide par ailleurs.
+- 🟠 `DOULEUR` — `physical_comfort` ≤ 2.
+- 🔴 `BASSE` — multi-signaux (≥ 3 dimensions ≤ 2) ou inconfort invalidant.
+
+**UI — cartes "Aujourd'hui" du dashboard** :
+- Nouveau helper `src/lib/verdict/verdict-style.ts` — mappings `verdict → { border, badge, label }`, dark mode inclus.
+- `auto-eval/dashboard/components/TodayCard.tsx` — bordure colorée + badge label + phrase de synthèse sous le score. Suppression de la couleur historique `score_max ≥ 4 = rouge` (remplacée par la couleur du verdict, plus juste cliniquement).
+- `wellness/dashboard/components/TodayCard.tsx` — même pattern, suppression de la couleur historique basée sur la moyenne.
+- Type `WellnessSnapshot` étendu avec `verdict` + `verdict_message`.
+- Type `EvalRow` côté page Achille étendu avec les mêmes champs.
+
+**Quality** :
+- typecheck + lint + tests (11 passed sur `wellness-streak.test.ts`) + build verts.
+- Aucune logique de scoring dupliquée côté front : tout vit dans les fonctions SQL `IMMUTABLE`.
+
+**Sources métier** :
+- `01_second-brain/02_areas/sport-health/CLAUDE.md` — pointe désormais sur les colonnes `verdict`/`verdict_message` comme source unique pour le Go/No-Go HSR.
+- `01_second-brain/02_areas/sport-health/knowledge/protocoles/auto-eval-tendon-achille-matin.md` — à mettre à jour pour acter la nouvelle règle composite (en attente validation Gaël).
+
+**Hors scope** :
+- Le mapping `verdict → couleur de bordure` est figé en TS (`verdict-style.ts`). Pas de personnalisation utilisateur.
+- Pas de timeline historique des verdicts (graphe dédié) — itération possible plus tard.
 
 ## 6. V2 — Ouverture B2C Athlete (1-2 mois après V1.5)
 

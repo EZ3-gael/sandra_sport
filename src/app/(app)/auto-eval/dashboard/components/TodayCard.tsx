@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import {
+  ACHILLES_VERDICT_STYLE,
+  type AchillesVerdict,
+} from '@/lib/verdict/verdict-style';
 
 type TodayCardProps = {
   today: string;
@@ -11,6 +15,8 @@ type TodayCardProps = {
     score_three_steps: number | null;
     score_ten_raises: number | null;
     score_palpation: number | null;
+    verdict: AchillesVerdict | null;
+    verdict_message: string | null;
   } | null;
 };
 
@@ -41,14 +47,11 @@ export function TodayCard({ today, todayEval }: TodayCardProps) {
     todayEval.score_palpation,
   ].filter((s): s is number => typeof s === 'number').length;
 
-  const colorClass =
-    todayEval.score_max === null
-      ? 'text-muted-foreground'
-      : todayEval.score_max >= 4
-        ? 'text-red-500'
-        : todayEval.score_max >= 2
-          ? 'text-amber-500'
-          : 'text-emerald-500';
+  const verdictStyle = todayEval.verdict
+    ? ACHILLES_VERDICT_STYLE[todayEval.verdict]
+    : null;
+
+  const borderClass = verdictStyle?.border ?? 'border-border';
 
   const bonusText =
     todayEval.bonus_heel_off_done === true
@@ -58,7 +61,7 @@ export function TodayCard({ today, todayEval }: TodayCardProps) {
         : '— non répondu';
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className={`rounded-xl border-2 bg-card p-4 ${borderClass}`}>
       <div className="flex items-baseline justify-between">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
           Aujourd&apos;hui · {today}
@@ -72,7 +75,7 @@ export function TodayCard({ today, todayEval }: TodayCardProps) {
         </span>
       </div>
       <div className="mt-1 flex items-baseline gap-3">
-        <span className={`text-3xl font-semibold tabular-nums ${colorClass}`}>
+        <span className="text-3xl font-semibold tabular-nums text-foreground">
           {todayEval.score_max === null ? '—' : `${todayEval.score_max}/10`}
         </span>
         {filled < 4 && (
@@ -81,6 +84,18 @@ export function TodayCard({ today, todayEval }: TodayCardProps) {
           </span>
         )}
       </div>
+      {verdictStyle && (
+        <span
+          className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${verdictStyle.badge}`}
+        >
+          {verdictStyle.label}
+        </span>
+      )}
+      {todayEval.verdict_message && (
+        <p className="mt-2 text-xs leading-relaxed text-foreground/80">
+          {todayEval.verdict_message}
+        </p>
+      )}
       <p className="mt-2 text-xs text-muted-foreground">
         Bonus heel-off : <span className="text-foreground">{bonusText}</span>
       </p>

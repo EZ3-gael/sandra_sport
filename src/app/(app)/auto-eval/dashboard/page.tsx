@@ -6,6 +6,7 @@ import {
   type AchillesEvalDay,
 } from '@/lib/programme/achilles-streak';
 import type { ClinicalTestCode } from '@/lib/validations/clinical-test';
+import type { AchillesVerdict } from '@/lib/verdict/verdict-style';
 import { TodayCard } from './components/TodayCard';
 import { TrendStats } from './components/TrendStats';
 import { MultiScoreChart } from './components/MultiScoreChart';
@@ -25,6 +26,8 @@ type EvalRow = {
   bonus_heel_off_done: boolean | null;
   pain_zones: string | null;
   notes: string | null;
+  verdict: AchillesVerdict | null;
+  verdict_message: string | null;
 };
 
 type ClinicalTestDbRow = {

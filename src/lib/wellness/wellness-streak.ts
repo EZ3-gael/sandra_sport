@@ -11,6 +11,7 @@
  */
 
 import { addDaysIso, todayIso, type IsoDate } from '@/lib/programme/dates';
+import type { SubjectiveVerdict } from '@/lib/verdict/verdict-style';
 
 export const WELLNESS_DIMENSIONS = [
   'sleep_quality',
@@ -44,6 +45,10 @@ export type WellnessSnapshot = {
   motivation: number | null;
   calm: number | null;
   physical_comfort: number | null;
+  /** Verdict calculé en base via la colonne générée (migration 012). */
+  verdict: SubjectiveVerdict | null;
+  /** Phrase de synthèse calculée en base (migration 012). */
+  verdict_message: string | null;
 };
 
 /** Moyenne des 7 dimensions saisies (NULL ignorés). null si tout est NULL. */
