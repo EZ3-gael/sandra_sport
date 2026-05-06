@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import {
   CHECKIN_DIMENSIONS,
@@ -94,16 +95,24 @@ export function WellnessClient({ entries }: { entries: CheckinRow[] }) {
 
   return (
     <>
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Check-in</h1>
-        <input
-          type="date"
-          aria-label="Date du check-in"
-          value={selectedDate}
-          max={today}
-          onChange={handleDateChange}
-          className="rounded-md border border-border bg-input px-2 py-1 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
-        />
+      <header className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">Auto-éval Ressenti</h1>
+          <input
+            type="date"
+            aria-label="Date de l'auto-éval"
+            value={selectedDate}
+            max={today}
+            onChange={handleDateChange}
+            className="rounded-md border border-border bg-input px-2 py-1 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+        </div>
+        <Link
+          href="/wellness/dashboard"
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-input px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          Voir le suivi →
+        </Link>
       </header>
 
       <form

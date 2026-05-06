@@ -1,9 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import {
-  CHECKIN_DIMENSIONS,
-  type MorningCheckin,
-} from '@/lib/validations/wellness';
+import { type MorningCheckin } from '@/lib/validations/wellness';
 
 type CheckinRow = MorningCheckin & {
   id: string;
@@ -123,17 +120,17 @@ export default async function HomePage() {
         <AchillesSummaryCard entry={todayAchilles} />
       )}
 
-      {/* Alerte check-in wellness */}
+      {/* Auto-éval Ressenti — état d'éveil 7 dimensions */}
       {!todayCheckin ? (
         <AlertCard
           tone="primary"
-          title="Check-in du jour à faire"
+          title="Auto-éval Ressenti à faire"
           body="Comment tu te sens ce matin ? Ça prend 30 secondes et ça calibre la suite."
-          ctaLabel="Faire le check-in"
+          ctaLabel="Faire l'auto-éval"
           ctaHref="/wellness"
         />
       ) : (
-        <CheckinSummaryCard entry={todayCheckin} />
+        <WellnessSummaryCard entry={todayCheckin} />
       )}
 
       {/* Séance du jour ou prochaine */}
@@ -174,10 +171,10 @@ export default async function HomePage() {
         </>
       )}
 
-      {/* Mini-timeline des derniers check-ins */}
+      {/* Mini-timeline des dernières auto-évals ressenti */}
       {recentCheckins && recentCheckins.length > 0 && (
         <>
-          <SectionHeader>Derniers check-ins</SectionHeader>
+          <SectionHeader>Dernières auto-évals ressenti</SectionHeader>
           <ul className="space-y-2">
             {recentCheckins.map((c) => (
               <CheckinTimelineRow key={c.id} entry={c} />
@@ -283,41 +280,35 @@ function AchillesSummaryCard({ entry }: { entry: AchillesEvalRow }) {
   );
 }
 
-function CheckinSummaryCard({ entry }: { entry: CheckinRow }) {
+function WellnessSummaryCard({ entry }: { entry: CheckinRow }) {
   const time = new Date(entry.captured_at).toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
   });
-  const avg = averageScore(entry);
+  const avg = averageScoreNumber(entry);
+  const colorClass =
+    avg === null
+      ? 'text-muted-foreground'
+      : avg >= 4
+        ? 'text-emerald-500'
+        : avg >= 2.5
+          ? 'text-amber-500'
+          : 'text-red-500';
   return (
     <Link
-      href="/wellness"
+      href="/wellness/dashboard"
       className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/50"
     >
       <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold">Check-in de ce matin</h3>
-        <span className="text-xs text-muted-foreground">{time} · moy. {avg}</span>
+        <h3 className="text-sm font-semibold">Auto-éval Ressenti</h3>
+        <span className="text-xs text-muted-foreground">{time}</span>
       </div>
-      <div className="mt-2 flex flex-wrap gap-1">
-        {CHECKIN_DIMENSIONS.map((dim) => {
-          const v = entry[dim.key];
-          if (typeof v !== 'number') return null;
-          return (
-            <span
-              key={dim.key}
-              className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
-              title={dim.label}
-            >
-              {dim.label.split(' ')[0]} {v}
-            </span>
-          );
-        })}
+      <div className="mt-1 flex items-baseline gap-3">
+        <span className={`text-2xl font-semibold tabular-nums ${colorClass}`}>
+          {avg === null ? '—' : `${avg.toFixed(1)}/5`}
+        </span>
+        <span className="ml-auto text-xs text-primary">voir le suivi →</span>
       </div>
-      {entry.pain_zones && (
-        <p className="mt-2 text-xs text-destructive">
-          Douleurs : {entry.pain_zones}
-        </p>
-      )}
     </Link>
   );
 }
@@ -401,7 +392,7 @@ function StatusBadge({ status }: { status: SessionRow['status'] }) {
 // Utils
 // ----------------------------------------------------------------------------
 
-function averageScore(r: Partial<MorningCheckin>): string {
+function averageScoreNumber(r: Partial<MorningCheckin>): number | null {
   const keys: (keyof MorningCheckin)[] = [
     'sleep_quality',
     'physical_energy',
@@ -414,9 +405,13 @@ function averageScore(r: Partial<MorningCheckin>): string {
   const values = keys
     .map((k) => r[k])
     .filter((v): v is number => typeof v === 'number');
-  if (values.length === 0) return '—';
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  return `${avg.toFixed(1)}/5`;
+  if (values.length === 0) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function averageScore(r: Partial<MorningCheckin>): string {
+  const avg = averageScoreNumber(r);
+  return avg === null ? '—' : `${avg.toFixed(1)}/5`;
 }
 
 function greetingForHour(d: Date): string {
