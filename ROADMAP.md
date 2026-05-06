@@ -1,6 +1,7 @@
 # Sandra Wellness — Roadmap
 
 > **Dernière refonte : 2026-04-23**
+> **Dernière mise à jour : 2026-05-06** (ajout V1.5e auto-éval tendon)
 > Source de vérité pour les jalons long terme. Pour les détails tactiques, voir les `notes/` (vision globale, module recettes, pivot 3 piliers, benchmark).
 >
 > **Nom de code intérimaire** : `sandra-wellness`. Nom produit final à trancher avant V2 (ouverture publique). Dossier `sandra_sport/` **non renommé** pour l'instant (rename différé au moment du nom final, pour éviter de renommer deux fois). Voir [`notes/vision-globale.md`](./notes/vision-globale.md).
@@ -145,6 +146,45 @@ Ce qu'on fera **en V2** (pivot assumé) :
 
 Voir [`notes/pivot-3-piliers-et-journal.md`](./notes/pivot-3-piliers-et-journal.md) pour la matière de réflexion initiale.
 
+### V1.5e — Pilotage rééducation tendon Achille [DONE le 2026-05-06]
+
+Livré dans la branche `feature/auto-eval-tendon` (PR à merger), juste avant W19 (démarrage protocole HSR phase 1 le 2026-05-11). Objectif : capturer une mesure quotidienne reproductible du tendon d'Achille droit + différencier AMI fonctionnelle vs atteinte nerveuse structurelle (suite Bloc G du bilan baseline 2026-05-05).
+
+**Trois nouvelles routes** :
+- `/auto-eval` — saisie matinale 60 s (4 mesures 0-10 + bonus heel-off + zones douleur + notes).
+- `/auto-eval/tests` — round ponctuel des 5 tests neuro-moteurs T1-T5 (anti-AMI).
+- `/auto-eval/dashboard` — suivi unifié (TodayCard, TrendStats, MultiScoreChart 4 mesures, ComplianceCalendar, ClinicalTestsCard avec historique des rounds, RecentNotes).
+
+**Harmonisation wellness** :
+- Renommage UI "Check-in" → "Auto-éval Ressenti" (titre `/wellness`, banners, carte home).
+- Nouvelle route `/wellness/dashboard` miroir du dashboard Achille (TodayCard, TrendStats avec streak ≥ 3/5, MultiDimensionChart 7 dimensions, ComplianceCalendar, **DimensionsAtRisk** — les 3 plus basses moy 7j avec tendance vs 7j précédents, RecentNotes).
+- Carte home wellness alignée sur le format Achille (moy /5 + couleur + heure + lien suivi).
+
+**DB — migration 011** :
+- 2 nouvelles tables : `achilles_morning_eval` (1/jour/user, contrainte unique, 4 sous-scores + score_max + bonus heel-off) et `clinical_test` (générique, extensible SLHRT/SEBT/knee-to-wall plus tard).
+- `DROP COLUMN morning_checkin.achilles_score` — la sémantique mono-score était trop pauvre, basculement complet sur `achilles_morning_eval`.
+- RLS + ON DELETE CASCADE + index uniques + triggers `updated_at`.
+
+**Refactor legacy** :
+- `AchillesChart`, `palier-conditions`, `achilles-streak` lisent désormais `achilles_morning_eval.score_max`.
+- Composant `AchillesScoreRow` retiré du `WellnessClient` — la saisie passe exclusivement par `/auto-eval`.
+- `RpeSlider` renommé en `ScoreSlider` avec prop `min` configurable et **mode compact** (carré central affichant la valeur, pour les ranges trop larges 0-10 qui débordaient sur mobile).
+- Nouveaux primitives UI partagées : `TextField`, `QualitativeChoice`.
+
+**Quality** :
+- **Vitest 4 installé** (npm run test / test:watch). 39 tests sur les helpers purs (`computeScoreMax`, `evaluateRoundVerdict`, `isResultPathological`, `computeWellnessStreak`, `topDimensionsAtRisk`, schémas Zod).
+- typecheck + lint + build verts.
+
+**Sources métier** :
+- [`notes/auto-eval-tendon-page.md`](./notes/auto-eval-tendon-page.md) — brief dev complet (architecture, schéma SQL, validations, wireframes, plan d'implémentation 7 étapes, checklist QA).
+- `01_second-brain/02_areas/sport-health/knowledge/protocoles/auto-eval-tendon-achille-matin.md` — protocole clinique source.
+- `01_second-brain/02_areas/sport-health/knowledge/bilans-cliniques/2026-05-05_etat-baseline-phase1.md` (Bloc G) — justification des tests T1-T5.
+
+**Hors scope explicite** :
+- Notification push matinale (pas en V1).
+- Multi-tendons gauche/droit (mono-tendon droit, ajout futur via colonne `side` si besoin).
+- Compliance toe raises G + marche consciente attaque talon-pointe (sous-protocole proprio, page dédiée future).
+
 ## 6. V2 — Ouverture B2C Athlete (1-2 mois après V1.5)
 
 Transformer Sandra Sport en produit auto-utilisable par n'importe quel athlete.
@@ -283,3 +323,4 @@ Scope et décisions complexes, **voir les notes dédiées** :
 - **2026-04-23** — Refonte complète. Remplace l'ancien ROADMAP V1/V1.5/V2 vague. Intègre la vision coach/athlete/coach IA partagée par Gaël, le benchmark 2026 (TrueCoach/Trainerize/Everfit/Hevy/Fitia/Jow), et les notes `pivot-3-piliers-et-journal.md` + `recipes-module.md` + `recipes-benchmark.md` produites la même journée.
 - **2026-04-23 (soir)** — Ajout de la §2 "Séquence time-to-market" avec mapping V1/V2/V3 coaching Gaël → phases techniques. Inversion V3/V4 : coach IA passe avant coach humain (justifié en §2). Numérotation sections décalée (+1) pour insérer la séquence. Vision détaillée dans `notes/vision-globale.md`.
 - **2026-04-23 (soir, fin)** — Décisions actées par Gaël : nom de code `sandra-wellness` (titre ROADMAP renommé), pivot 3 piliers reporté à V2 (V1.5d mis à jour), demande API Garmin à lancer maintenant (§10 mise à jour). Beta testeuse identifiée (coach amie de Gaël) — sera utilisée comme athlète en V1.5 puis comme coach en V3, voir `notes/vision-globale.md`.
+- **2026-05-06** — Ajout du palier **V1.5e** (pilotage rééducation tendon Achille). Livré juste avant le démarrage W19 du protocole HSR phase 1 (2026-05-11). Trois nouvelles routes (`/auto-eval`, `/auto-eval/tests`, `/auto-eval/dashboard`), harmonisation `/wellness` (renommage "Auto-éval Ressenti" + dashboard miroir avec bloc DimensionsAtRisk inédit), migration 011 (deux tables dédiées + drop legacy), Vitest installé. Détails dans la nouvelle §5.V1.5e ci-dessus et dans [`notes/auto-eval-tendon-page.md`](./notes/auto-eval-tendon-page.md).
