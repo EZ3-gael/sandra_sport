@@ -19,6 +19,8 @@ function snap(overrides: Partial<WellnessSnapshot>): WellnessSnapshot {
     motivation: null,
     calm: null,
     physical_comfort: null,
+    verdict: null,
+    verdict_message: null,
     ...overrides,
   };
 }

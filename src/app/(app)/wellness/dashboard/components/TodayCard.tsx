@@ -4,6 +4,7 @@ import {
   checkinAverage,
   type WellnessSnapshot,
 } from '@/lib/wellness/wellness-streak';
+import { SUBJECTIVE_VERDICT_STYLE } from '@/lib/verdict/verdict-style';
 
 export function TodayCard({
   today,
@@ -36,17 +37,14 @@ export function TodayCard({
     (k) => typeof todayCheckin[k] === 'number',
   ).length;
 
-  const colorClass =
-    avg === null
-      ? 'text-muted-foreground'
-      : avg >= 4
-        ? 'text-emerald-500'
-        : avg >= 2.5
-          ? 'text-amber-500'
-          : 'text-red-500';
+  const verdictStyle = todayCheckin.verdict
+    ? SUBJECTIVE_VERDICT_STYLE[todayCheckin.verdict]
+    : null;
+
+  const borderClass = verdictStyle?.border ?? 'border-border';
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className={`rounded-xl border-2 bg-card p-4 ${borderClass}`}>
       <div className="flex items-baseline justify-between">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
           Aujourd&apos;hui · {today}
@@ -60,7 +58,7 @@ export function TodayCard({
         </span>
       </div>
       <div className="mt-1 flex items-baseline gap-3">
-        <span className={`text-3xl font-semibold tabular-nums ${colorClass}`}>
+        <span className="text-3xl font-semibold tabular-nums text-foreground">
           {avg === null ? '—' : `${avg.toFixed(1)}/5`}
         </span>
         {filled < 7 && (
@@ -69,6 +67,18 @@ export function TodayCard({
           </span>
         )}
       </div>
+      {verdictStyle && (
+        <span
+          className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${verdictStyle.badge}`}
+        >
+          {verdictStyle.label}
+        </span>
+      )}
+      {todayCheckin.verdict_message && (
+        <p className="mt-2 text-xs leading-relaxed text-foreground/80">
+          {todayCheckin.verdict_message}
+        </p>
+      )}
       <Link
         href="/wellness"
         className="mt-3 inline-flex items-center gap-1 rounded-md border border-border bg-input px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
