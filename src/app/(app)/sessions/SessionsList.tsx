@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { SwipeToDismissCard } from '@/components/features/swipe-to-dismiss-card';
 
 export type SessionRow = {
   id: string;
@@ -60,7 +61,13 @@ export function SessionsList({ today, upcoming, past }: SessionsListProps) {
         {today.length > 0 ? (
           <ul className="mt-2 space-y-2">
             {today.map((s) => (
-              <SessionCard key={s.id} session={s} />
+              <SwipeToDismissCard
+                key={s.id}
+                sessionId={s.id}
+                sessionTitle={s.title}
+              >
+                <SessionCardContent session={s} />
+              </SwipeToDismissCard>
             ))}
           </ul>
         ) : (
@@ -82,7 +89,13 @@ export function SessionsList({ today, upcoming, past }: SessionsListProps) {
           (upcoming.length > 0 ? (
             <ul className="mt-2 space-y-2">
               {upcoming.map((s) => (
-                <SessionCard key={s.id} session={s} />
+                <SwipeToDismissCard
+                key={s.id}
+                sessionId={s.id}
+                sessionTitle={s.title}
+              >
+                <SessionCardContent session={s} />
+              </SwipeToDismissCard>
               ))}
             </ul>
           ) : (
@@ -104,7 +117,13 @@ export function SessionsList({ today, upcoming, past }: SessionsListProps) {
           (past.length > 0 ? (
             <ul className="mt-2 space-y-2">
               {past.map((s) => (
-                <SessionCard key={s.id} session={s} />
+                <SwipeToDismissCard
+                key={s.id}
+                sessionId={s.id}
+                sessionTitle={s.title}
+              >
+                <SessionCardContent session={s} />
+              </SwipeToDismissCard>
               ))}
             </ul>
           ) : (
@@ -198,33 +217,31 @@ function EmptyRow({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SessionCard({ session }: { session: SessionRow }) {
+function SessionCardContent({ session }: { session: SessionRow }) {
   return (
-    <li>
-      <Link
-        href={`/sessions/${session.id}`}
-        className="block rounded-lg border border-border bg-card p-4 transition hover:border-primary/50"
-      >
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="font-medium">{session.title}</span>
-          <span className="text-xs text-muted-foreground">
-            {session.date}
-            {session.slot ? ` · ${session.slot}` : ''}
-            {session.planned_start_time
-              ? ` · ${session.planned_start_time.slice(0, 5)}`
-              : ''}
+    <Link
+      href={`/sessions/${session.id}`}
+      className="block rounded-lg border border-border bg-card p-4 transition hover:border-primary/50"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-medium">{session.title}</span>
+        <span className="text-xs text-muted-foreground">
+          {session.date}
+          {session.slot ? ` · ${session.slot}` : ''}
+          {session.planned_start_time
+            ? ` · ${session.planned_start_time.slice(0, 5)}`
+            : ''}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center gap-2 text-xs">
+        {session.session_type && (
+          <span className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground">
+            {session.session_type}
           </span>
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-xs">
-          {session.session_type && (
-            <span className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground">
-              {session.session_type}
-            </span>
-          )}
-          <StatusBadge status={session.status} />
-        </div>
-      </Link>
-    </li>
+        )}
+        <StatusBadge status={session.status} />
+      </div>
+    </Link>
   );
 }
 

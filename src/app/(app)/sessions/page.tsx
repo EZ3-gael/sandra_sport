@@ -17,6 +17,7 @@ export default async function SessionsPage() {
       'id, date, slot, planned_start_time, title, session_type, status',
     )
     .eq('user_id', user!.id)
+    .is('dismissed_at', null)
     .order('date', { ascending: false })
     .limit(200)
     .returns<SessionRow[]>();
