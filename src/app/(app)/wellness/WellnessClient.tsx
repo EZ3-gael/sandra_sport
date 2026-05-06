@@ -145,10 +145,6 @@ export function WellnessClient({ entries }: { entries: CheckinRow[] }) {
           />
         ))}
 
-        <AchillesScoreRow
-          value={entryDefaults.achilles_score ?? null}
-        />
-
         <TextField
           name="pain_zones"
           label="Zones de douleur (optionnel)"
@@ -363,68 +359,6 @@ function ScoreRow({
         ))}
       </div>
     </fieldset>
-  );
-}
-
-function AchillesScoreRow({ value }: { value: number | null }) {
-  return (
-    <fieldset>
-      <legend className="mb-1 text-sm font-medium">
-        Score Achille (auto-éval matinale)
-      </legend>
-      <div className="mb-2 flex justify-between text-xs text-muted-foreground">
-        <span>0 : aucune douleur</span>
-        <span>10 : douleur maximale</span>
-      </div>
-      <div className="grid grid-cols-6 gap-1.5">
-        <label className="cursor-pointer">
-          <input
-            type="radio"
-            name="achilles_score"
-            value=""
-            defaultChecked={value == null}
-            className="peer sr-only"
-          />
-          <div className="rounded-lg border border-border bg-input py-2 text-center text-xs text-muted-foreground peer-checked:border-muted-foreground peer-checked:bg-muted peer-checked:text-foreground">
-            —
-          </div>
-        </label>
-        {[0, 1, 2, 3, 4].map((n) => (
-          <AchillesButton key={n} n={n} value={value} />
-        ))}
-      </div>
-      <div className="mt-1.5 grid grid-cols-6 gap-1.5">
-        {[5, 6, 7, 8, 9, 10].map((n) => (
-          <AchillesButton key={n} n={n} value={value} />
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
-function AchillesButton({ n, value }: { n: number; value: number | null }) {
-  const high = n >= 4;
-  const mid = n >= 2 && n < 4;
-  const colorChecked = high
-    ? 'peer-checked:border-red-500 peer-checked:bg-red-500 peer-checked:text-white'
-    : mid
-      ? 'peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white'
-      : 'peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground';
-  return (
-    <label className="cursor-pointer">
-      <input
-        type="radio"
-        name="achilles_score"
-        value={String(n)}
-        defaultChecked={value === n}
-        className="peer sr-only"
-      />
-      <div
-        className={`rounded-lg border border-border bg-input py-2 text-center text-sm font-medium ${colorChecked}`}
-      >
-        {n}
-      </div>
-    </label>
   );
 }
 

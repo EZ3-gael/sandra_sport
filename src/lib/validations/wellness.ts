@@ -6,25 +6,15 @@ import { z } from 'zod';
  * Aligné sur `public.morning_checkin` (migrations 001 + 004).
  * Plusieurs check-ins par jour sont autorisés depuis la migration 004.
  * Les 7 dimensions 1-5 acceptent `null` — ne jamais inventer un score.
+ *
+ * Note (migration 011) : le champ `achilles_score` a été déplacé vers la table
+ * dédiée `achilles_morning_eval`. La saisie passe désormais par /auto-eval.
  */
 const scoreOrNull = z
   .number()
   .int()
   .min(1, 'Le score doit être entre 1 et 5.')
   .max(5, 'Le score doit être entre 1 et 5.')
-  .nullable()
-  .optional();
-
-/**
- * Score Achille 0-10 (sémantique inverse des dimensions wellness 1-5) :
- *   0 = aucune douleur, 10 = douleur maximale.
- * NULL autorisé (ne jamais inventer un score).
- */
-const achillesScoreOrNull = z
-  .number()
-  .int()
-  .min(0, 'Le score doit être entre 0 et 10.')
-  .max(10, 'Le score doit être entre 0 et 10.')
   .nullable()
   .optional();
 
@@ -40,8 +30,6 @@ export const morningCheckinSchema = z.object({
   motivation: scoreOrNull,
   calm: scoreOrNull,
   physical_comfort: scoreOrNull,
-
-  achilles_score: achillesScoreOrNull,
 
   pain_zones: z.string().trim().max(500).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),

@@ -6,7 +6,7 @@ import {
   SessionProtocolView,
   type Protocol,
 } from './SessionProtocolView';
-import { RpeSlider } from '@/components/ui/RpeSlider';
+import { ScoreSlider } from '@/components/ui/ScoreSlider';
 
 type SessionRow = {
   id: string;
@@ -158,9 +158,10 @@ export default async function SessionDetailPage({
           <RessentiView note={existingNote} />
         ) : (
           <form action={saveAction} className="space-y-5">
-            <RpeSlider
+            <ScoreSlider
               name="rpe"
               defaultValue={existingNote?.notes_struct?.rpe ?? null}
+              min={1}
               max={10}
               label="RPE — intensité perçue"
               low="1 — très facile"

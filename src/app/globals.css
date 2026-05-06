@@ -63,6 +63,6 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* RpeSlider — l'input range natif est rendu invisible (opacity-0) et
+/* ScoreSlider — l'input range natif est rendu invisible (opacity-0) et
  * superposé sur un track custom (divs positionnés absolute). Le thumb,
  * les ticks et la jauge sont des divs. Pas de CSS natif à styler. */

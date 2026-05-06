@@ -10,6 +10,14 @@ type CheckinRow = MorningCheckin & {
   captured_at: string;
 };
 
+type AchillesEvalRow = {
+  id: string;
+  date: string;
+  captured_at: string;
+  score_max: number | null;
+  bonus_heel_off_done: boolean | null;
+};
+
 type SessionRow = {
   id: string;
   date: string;
@@ -28,6 +36,14 @@ export default async function HomePage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const nowIso = new Date().toISOString();
+
+  // Auto-éval Achille du jour (1/jour, contrainte unique)
+  const { data: todayAchilles } = await supabase
+    .from('achilles_morning_eval')
+    .select('id, date, captured_at, score_max, bonus_heel_off_done')
+    .eq('user_id', user!.id)
+    .eq('date', today)
+    .maybeSingle<AchillesEvalRow>();
 
   // Check-in du jour (dernier de la journée si plusieurs)
   const { data: todayCheckins } = await supabase
@@ -94,7 +110,20 @@ export default async function HomePage() {
         <p className="mt-1 text-xs text-muted-foreground">{formatToday(nowIso)}</p>
       </header>
 
-      {/* Alerte check-in */}
+      {/* Auto-éval Achille — premier geste au réveil, avant tout mouvement */}
+      {!todayAchilles ? (
+        <AlertCard
+          tone="primary"
+          title="Auto-éval Achille à faire"
+          body="Au réveil, avant de poser le pied au sol. 60 secondes max."
+          ctaLabel="Faire l'auto-éval"
+          ctaHref="/auto-eval"
+        />
+      ) : (
+        <AchillesSummaryCard entry={todayAchilles} />
+      )}
+
+      {/* Alerte check-in wellness */}
       {!todayCheckin ? (
         <AlertCard
           tone="primary"
@@ -208,6 +237,49 @@ function AlertCard({
         {ctaLabel}
       </Link>
     </div>
+  );
+}
+
+function AchillesSummaryCard({ entry }: { entry: AchillesEvalRow }) {
+  const time = new Date(entry.captured_at).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const colorClass =
+    entry.score_max === null
+      ? 'text-muted-foreground'
+      : entry.score_max >= 4
+        ? 'text-red-500'
+        : entry.score_max >= 2
+          ? 'text-amber-500'
+          : 'text-emerald-500';
+  const bonusBadge =
+    entry.bonus_heel_off_done === true
+      ? '✓ bonus'
+      : entry.bonus_heel_off_done === false
+        ? '✗ bonus'
+        : null;
+  return (
+    <Link
+      href="/auto-eval/dashboard"
+      className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/50"
+    >
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-sm font-semibold">Auto-éval Achille</h3>
+        <span className="text-xs text-muted-foreground">{time}</span>
+      </div>
+      <div className="mt-1 flex items-baseline gap-3">
+        <span className={`text-2xl font-semibold tabular-nums ${colorClass}`}>
+          {entry.score_max === null ? '—' : `${entry.score_max}/10`}
+        </span>
+        {bonusBadge && (
+          <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+            {bonusBadge}
+          </span>
+        )}
+        <span className="ml-auto text-xs text-primary">voir le suivi →</span>
+      </div>
+    </Link>
   );
 }
 
