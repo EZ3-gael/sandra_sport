@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Toaster } from 'sonner';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -26,6 +27,8 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-full flex-col pb-20">
       {children}
+
+      <Toaster position="bottom-center" offset={88} richColors closeButton />
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card backdrop-blur">
         <div className="mx-auto grid max-w-lg grid-cols-5">
