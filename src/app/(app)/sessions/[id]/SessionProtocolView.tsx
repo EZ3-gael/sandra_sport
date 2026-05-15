@@ -6,7 +6,7 @@ import { toggleItemCheck } from './actions';
 type ItemNode = {
   id: string;
   text: string;
-  kind?: 'item' | 'heading' | 'note' | 'paragraph';
+  kind?: 'item' | 'heading' | 'note' | 'paragraph' | 'bullet';
 };
 
 type Subsection = {
@@ -73,9 +73,14 @@ function SectionView({
   initialCheckedItemIds: string[];
 }) {
   const [open, setOpen] = useState(!section.default_collapsed);
+  // Accordéon des sous-blocs : un seul ouvert à la fois, tous fermés au départ.
+  const [openSubId, setOpenSubId] = useState<string | null>(null);
 
-  // Compte des items cochés pour cette section (pour afficher "3/8")
-  const { total, checked } = countItems(section, initialCheckedItemIds);
+  // Compte des exercices cochés (items directs de la section + de ses sous-blocs).
+  const { total, checked } = countTasks(
+    [...section.items, ...section.subsections.flatMap((sub) => sub.items)],
+    initialCheckedItemIds,
+  );
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -89,17 +94,7 @@ function SectionView({
           <span className="font-medium">{section.title}</span>
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          {section.type === 'checklist' && total > 0 && (
-            <span
-              className={`whitespace-nowrap tabular-nums ${
-                checked === total
-                  ? 'rounded-md bg-primary/20 px-2 py-0.5 font-medium text-primary'
-                  : 'rounded-md bg-muted px-2 py-0.5'
-              }`}
-            >
-              {checked} / {total}
-            </span>
-          )}
+          {total > 0 && <CountBadge checked={checked} total={total} />}
         </span>
       </button>
 
@@ -108,22 +103,22 @@ function SectionView({
           {section.items.length > 0 && (
             <ItemList
               items={section.items}
-              type={section.type}
               sessionId={sessionId}
               initialCheckedItemIds={initialCheckedItemIds}
             />
           )}
 
           {section.subsections.map((sub) => (
-            <div key={sub.id} className="space-y-1.5">
-              <h3 className="text-sm font-semibold">{sub.title}</h3>
-              <ItemList
-                items={sub.items}
-                type={section.type}
-                sessionId={sessionId}
-                initialCheckedItemIds={initialCheckedItemIds}
-              />
-            </div>
+            <SubsectionView
+              key={sub.id}
+              subsection={sub}
+              open={openSubId === sub.id}
+              onToggle={() =>
+                setOpenSubId((id) => (id === sub.id ? null : sub.id))
+              }
+              sessionId={sessionId}
+              initialCheckedItemIds={initialCheckedItemIds}
+            />
           ))}
         </div>
       )}
@@ -131,14 +126,68 @@ function SectionView({
   );
 }
 
+function SubsectionView({
+  subsection,
+  open,
+  onToggle,
+  sessionId,
+  initialCheckedItemIds,
+}: {
+  subsection: Subsection;
+  open: boolean;
+  onToggle: () => void;
+  sessionId: string;
+  initialCheckedItemIds: string[];
+}) {
+  const { total, checked } = countTasks(subsection.items, initialCheckedItemIds);
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition hover:bg-muted/50"
+      >
+        <span className="flex items-center gap-2">
+          <Chevron open={open} />
+          <span className="text-sm font-semibold">{subsection.title}</span>
+        </span>
+        {total > 0 && <CountBadge checked={checked} total={total} />}
+      </button>
+
+      {open && (
+        <div className="border-t border-border px-3 py-2">
+          <ItemList
+            items={subsection.items}
+            sessionId={sessionId}
+            initialCheckedItemIds={initialCheckedItemIds}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CountBadge({ checked, total }: { checked: number; total: number }) {
+  return (
+    <span
+      className={`whitespace-nowrap rounded-md px-2 py-0.5 text-xs tabular-nums ${
+        checked === total
+          ? 'bg-primary/20 font-medium text-primary'
+          : 'bg-muted text-muted-foreground'
+      }`}
+    >
+      {checked} / {total}
+    </span>
+  );
+}
+
 function ItemList({
   items,
-  type,
   sessionId,
   initialCheckedItemIds,
 }: {
   items: ItemNode[];
-  type: 'notes' | 'checklist';
   sessionId: string;
   initialCheckedItemIds: string[];
 }) {
@@ -150,7 +199,6 @@ function ItemList({
         <ItemRow
           key={item.id}
           item={item}
-          type={type}
           sessionId={sessionId}
           initiallyChecked={initialCheckedItemIds.includes(item.id)}
         />
@@ -161,12 +209,10 @@ function ItemList({
 
 function ItemRow({
   item,
-  type,
   sessionId,
   initiallyChecked,
 }: {
   item: ItemNode;
-  type: 'notes' | 'checklist';
   sessionId: string;
   initiallyChecked: boolean;
 }) {
@@ -174,44 +220,37 @@ function ItemRow({
   const [isPending, startTransition] = useTransition();
 
   // Heading : titre d'exo non-cochable (ex. "**Exo 1 — Mollets chargés**").
-  // S'affiche en gras, sans puce ni checkbox, avec un peu de marge supérieure
-  // pour séparer visuellement les blocs d'exos dans une même sous-section.
+  // S'affiche en gras, sans puce ni checkbox.
   if (item.kind === 'heading') {
     return (
       <li className="pt-2 text-sm font-semibold text-foreground first:pt-0">
-        <span
-          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
-        />
+        <span dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }} />
       </li>
     );
   }
 
-  // Note : tip technique sous un item exo (syntaxe markdown `> texte`).
-  // Italique gris, indenté, non-cochable. Visuellement attaché à l'item
-  // précédent grâce au padding-left et la marge top minimale.
+  // Note : tip technique (syntaxe markdown `> texte`). Italique gris, indenté,
+  // non-cochable. Visuellement attaché à l'item précédent.
   if (item.kind === 'note') {
     return (
       <li className="-mt-1 pl-7 text-xs italic text-muted-foreground">
-        <span
-          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
-        />
+        <span dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }} />
       </li>
     );
   }
 
-  // Paragraphe : prose libre (Go/No-Go, Pour info...). Texte plein, pas de
-  // puce ni de checkbox.
+  // Paragraphe : prose libre (texte plein, pas de puce ni de checkbox).
   if (item.kind === 'paragraph') {
     return (
       <li className="text-sm leading-relaxed text-foreground">
-        <span
-          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }}
-        />
+        <span dangerouslySetInnerHTML={{ __html: renderInlineMd(item.text) }} />
       </li>
     );
   }
 
-  if (type !== 'checklist') {
+  // Puce : note à puce non-cochable (syntaxe markdown `- texte`). Consigne,
+  // rappel, contexte — tout ce qui se lit sans se cocher.
+  if (item.kind === 'bullet') {
     return (
       <li className="flex gap-2 text-sm text-muted-foreground">
         <span className="select-none text-border">•</span>
@@ -223,6 +262,7 @@ function ItemRow({
     );
   }
 
+  // kind 'item' (ou défaut) : exercice / action cochable (syntaxe `[ ] texte`).
   function handleToggle() {
     // Optimistic update
     setChecked((c) => !c);
@@ -296,19 +336,17 @@ function CheckIcon() {
   );
 }
 
-function countItems(
-  section: Section,
+/**
+ * Compte les exercices cochables (kind "item") dans une liste de nœuds, et
+ * combien sont déjà cochés. Headings, notes, paragraphes et puces sont ignorés.
+ */
+function countTasks(
+  items: ItemNode[],
   checkedIds: string[],
 ): { total: number; checked: number } {
-  const allItems: ItemNode[] = [
-    ...section.items,
-    ...section.subsections.flatMap((s) => s.items),
-  ].filter(
-    (i) =>
-      i.kind !== 'heading' && i.kind !== 'note' && i.kind !== 'paragraph',
-  );
-  const total = allItems.length;
-  const checked = allItems.filter((i) => checkedIds.includes(i.id)).length;
+  const tasks = items.filter((i) => (i.kind ?? 'item') === 'item');
+  const total = tasks.length;
+  const checked = tasks.filter((i) => checkedIds.includes(i.id)).length;
   return { total, checked };
 }
 

@@ -5,7 +5,7 @@ structure attendue par l'app (accordion + checklists). Réutilisable par
 `session_sync.py` (import batch depuis .md) et par tout futur flux où Sandra
 produit une séance en markdown puis la pousse en DB via MCP.
 
-Format en entrée : voir `sport-sante/knowledge/seances/template-seance.md`.
+Format en entrée : voir `01_areas/sport-health/knowledge/seances/template-seance.md`.
 Format en sortie : consommé par `SessionProtocolView.tsx` côté app.
 """
 
@@ -43,8 +43,11 @@ BOLD_HEADING_RE = re.compile(r"^\*\*([^*]+)\*\*\s*$")
 # Rendu en italique gris non-cochable, sous l'item précédent.
 TIP_LINE_RE = re.compile(r"^>\s*(.+)$")
 
-# Préfixes de task-list à stripper (`- [ ] action` → `action`).
-TASK_LIST_CHECKED_PREFIXES = ("[ ] ", "[x] ", "[X] ")
+# Item cochable : "[ ] action" ou "[x] action" (case Markdown). Le tiret
+# devant est toléré ("- [ ] action") pour rester compatible avec la task-list
+# standard, mais la convention documentée est la case seule, sans tiret.
+# Une ligne "- texte" sans case est une note à puce, non cochable (kind bullet).
+TASK_ITEM_RE = re.compile(r"^(?:-\s+)?\[[ xX]\]\s+(.+)$")
 
 
 def _section_is_checklist(title_lower: str) -> bool:
@@ -131,31 +134,43 @@ def parse_protocol(body: str) -> dict[str, Any]:
             current_section["subsections"].append(current_subsection)
             continue
 
-        # Item de liste `- text`
         stripped = line.lstrip()
+
+        # Item cochable : "[ ] action" / "[x] action" (tiret optionnel devant).
+        # C'est le SEUL marqueur qui produit une case à cocher dans l'app.
+        task_match = TASK_ITEM_RE.match(stripped)
+        if task_match and current_section is not None:
+            text = task_match.group(1).strip()
+            if not text:
+                continue
+            root = (
+                current_subsection if current_subsection is not None
+                else current_section
+            )
+            item = {
+                "id": f"{root['id']}-{item_hash(text)}",
+                "text": text,
+                "kind": "item",
+            }
+            root["items"].append(item)
+            continue
+
+        # Puce non cochable : "- texte" (note, consigne, contexte, rappel).
+        # Affichée avec une puce, jamais de case à cocher.
         if stripped.startswith("- ") and current_section is not None:
             text = stripped[2:].strip()
             if not text:
                 continue
-            # Syntaxe GitHub task-list : strip le `[ ]` / `[x]` au début pour
-            # éviter qu'il s'affiche à côté de la checkbox de l'app.
-            for pref in TASK_LIST_CHECKED_PREFIXES:
-                if text.startswith(pref):
-                    text = text[len(pref):].strip()
-                    break
-            if not text:
-                continue
-            item = {
-                "id": f"{current_section['id']}-{item_hash(text)}",
+            root = (
+                current_subsection if current_subsection is not None
+                else current_section
+            )
+            bullet = {
+                "id": f"{root['id']}-b-{item_hash(text)}",
                 "text": text,
-                "kind": "item",
+                "kind": "bullet",
             }
-            if current_subsection is not None:
-                # Préfixe avec la sous-section pour éviter collisions inter-sections
-                item["id"] = f"{current_subsection['id']}-{item_hash(text)}"
-                current_subsection["items"].append(item)
-            else:
-                current_section["items"].append(item)
+            root["items"].append(bullet)
             continue
 
         # Tip technique en blockquote `> 💡 texte` : rendu en italique gris
