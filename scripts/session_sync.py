@@ -1,7 +1,7 @@
 """session_sync.py — sync des .md de seances-du-jour vers Supabase.
 
 Lit :
-    D:/SANDRA/01_Brainstorming/sport-sante/seances-du-jour/*.md
+    D:/SANDRA/01_areas/sport-health/seances-du-jour/*.md
 
 Upsert dans : public.sessions (via SERVICE_ROLE_KEY, bypass RLS)
 
@@ -45,7 +45,7 @@ SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 USER_ID = os.getenv("SANDRA_SPORT_USER_ID")
 
 DEFAULT_SEANCES_DIR = Path(
-    "D:/SANDRA/01_second-brain/02_areas/sport-health/seances-du-jour"
+    "D:/SANDRA/01_areas/sport-health/seances-du-jour"
 )
 SEANCES_DIR = Path(os.getenv("SANDRA_SPORT_SEANCES_DIR") or DEFAULT_SEANCES_DIR)
 
