@@ -309,8 +309,8 @@ function BonusHeelOffSection({
     <fieldset className="space-y-2 rounded-lg border border-dashed border-border p-3">
       <legend className="px-1 text-sm font-medium">Bonus heel-off</legend>
       <p className="text-xs text-muted-foreground">
-        3 × 10 montées sur pointes bilatérales tempo 2-2-2, après la routine de
-        mobilité, avant la marche libre.
+        3 × 10 montées sur pointes bilatérales tempo 2-2-2, 30 s entre les
+        séries, après la routine de mobilité, avant la marche libre.
       </p>
       <input type="hidden" name="bonus_heel_off_done" value={formValue} />
       <div className="grid grid-cols-3 gap-1.5">
